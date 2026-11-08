@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email         String    @unique
+  password_hash String
+  username      String    @unique
+  display_name  String?
+  avatar_url    String?
+  bio           String?
+  created_at    DateTime  @default(now()) @db.Timestamptz
+  updated_at    DateTime  @default(now()) @db.Timestamptz @updatedAt
+  is_active     Boolean   @default(true)
+  is_email_verified Boolean @default(false)
+
+  projects      Project[]
+  collaborators ProjectCollaborator[]
+  fileVersions  FileVersion[]
+  sessions      Session[]
+
+  @@map("users")
+  @@index([email])
+  @@index([username])
+}
+
+model Project {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  owner_id      String    @db.Uuid
+  name          String
+  slug          String
+  description   String?
+  visibility    Visibility @default(private)
+  language      String?
+  framework     String?
+  template      String?
+  created_at    DateTime  @default(now()) @db.Timestamptz
+  updated_at    DateTime  @default(now()) @db.Timestamptz @updatedAt
+
+  owner         User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  files         File[]
+  collaborators ProjectCollaborator[]
+  tags          ProjectTagAssignment[]
+
+  @@map("projects")
+  @@unique([owner_id, slug])
+  @@index([owner_id])
+}
+
+model File {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  project_id    String    @db.Uuid
+  parent_id     String?   @db.Uuid
+  name          String
+  path          String
+  content       String?
+  file_type     String?
+  language      String?
+  size          Int       @default(0)
+  is_folder     Boolean   @default(false)
+  created_at    DateTime  @default(now()) @db.Timestamptz
+  updated_at    DateTime  @default(now()) @db.Timestamptz @updatedAt
+
+  project       Project    @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  parent        File?      @relation("File_parent", fields: [parent_id], references: [id], onDelete: Cascade)
+  children      File[]     @relation("File_parent")
+  versions      FileVersion[]
+
+  @@map("files")
+  @@unique([project_id, path])
+  @@index([project_id])
+  @@index([parent_id])
+}
+
+model FileVersion {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  file_id         String   @db.Uuid
+  content         String
+  commit_message  String?
+  version_number  Int
+  created_by      String?  @db.Uuid
+  created_at      DateTime @default(now()) @db.Timestamptz
+
+  file            File     @relation(fields: [file_id], references: [id], onDelete: Cascade)
+  creator         User?    @relation(fields: [created_by], references: [id])
+
+  @@map("file_versions")
+  @@unique([file_id, version_number])
+  @@index([file_id])
+}
+
+model ProjectCollaborator {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  project_id  String           @db.Uuid
+  user_id     String           @db.Uuid
+  role        CollaboratorRole @default(viewer)
+  created_at  DateTime         @default(now()) @db.Timestamptz
+
+  project     Project           @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("project_collaborators")
+  @@unique([project_id, user_id])
+  @@index([project_id])
+  @@index([user_id])
+}
+
+model ProjectTag {
+  id            String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String                 @unique
+  color         String                 @default("#6366f1")
+  assignments   ProjectTagAssignment[]
+
+  @@map("project_tags")
+  @@index([name])
+}
+
+model ProjectTagAssignment {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  project_id  String      @db.Uuid
+  tag_id      String      @db.Uuid
+  created_at  DateTime    @default(now()) @db.Timestamptz
+
+  project     Project     @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  tag         ProjectTag  @relation(fields: [tag_id], references: [id], onDelete: Cascade)
+
+  @@map("project_tag_assignments")
+  @@unique([project_id, tag_id])
+  @@index([project_id])
+  @@index([tag_id])
+}
+
+model Session {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String    @db.Uuid
+  refresh_token String
+  user_agent    String?
+  ip_address    String?
+  expires_at    DateTime  @db.Timestamptz
+  created_at    DateTime  @default(now()) @db.Timestamptz
+
+  user          User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+  @@index([user_id])
+  @@index([expires_at])
+}
+
+enum Visibility {
+  public
+  private
+  team
+}
+
+enum CollaboratorRole {
+  owner
+  admin
+  editor
+  viewer
+}

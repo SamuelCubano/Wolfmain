@@ -6,11 +6,16 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "contract:emit": "prisma contract emit"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "@prisma/client": "^5.22.0",
+    "@prisma/extension-accelerate": "^3.0.1",
+    "dotenv": "^18.0.9",
     "next": "16.4.5",
+    "prisma": "^5.22.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
