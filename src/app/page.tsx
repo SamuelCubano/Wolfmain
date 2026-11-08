@@ -1,47 +1,96 @@
 import Link from "next/link";
 
+const features = [
+  {
+    icon: "✨",
+    title: "Editor inteligente",
+    desc: "Autocompletado, resaltado de sintaxis y una experiencia fluida para escribir HTML, CSS y JS.",
+  },
+  {
+    icon: "⚡",
+    title: "Vista previa en vivo",
+    desc: "Cada cambio se refleja al instante. Itera rápido sin salir del flujo.",
+  },
+  {
+    icon: "🎨",
+    title: "Tema adaptable",
+    desc: "Modo claro, oscuro o automático. Tu entorno, a tu manera.",
+  },
+  {
+    icon: "📁",
+    title: "Proyectos",
+    desc: "Crea y organiza tus proyectos. Abre el editor con contexto de proyecto.",
+  },
+  {
+    icon: "🔒",
+    title: "Cuenta segura",
+    desc: "Registro, inicio de sesión y gestión de perfil con sesiones protegidas.",
+  },
+  {
+    icon: "🚀",
+    title: "Listo para crecer",
+    desc: "Base sólida con Next.js y base de datos para escalar funcionalidades.",
+  },
+];
+
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-slate-900 dark:text-slate-100">
-      <header className="sticky top-0 z-10 backdrop-blur bg-white/70 dark:bg-slate-900/70 border-b border-slate-200 dark:border-slate-700">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">Dev al instante</h1>
+    <main className="flex-1 app-bg">
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[900px] h-[500px] rounded-full bg-emerald-500/15 blur-3xl" />
         </div>
-      </header>
-
-      <section className="max-w-6xl mx-auto px-6 py-24 text-center">
-        <h2 className="text-5xl md:text-6xl font-extrabold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-500">
-          Playground de código web
-        </h2>
-        <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-10">
-          Escribe HTML, CSS y JavaScript en un editor con resaltado de sintaxis, autocompletado y vista previa en tiempo real. Ideal para aprender, probar ideas y compartir.
-        </p>
-        <Link
-          href="/editor"
-          className="inline-block px-8 py-4 bg-emerald-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:bg-emerald-700 transition"
-        >
-          Probar editor
-        </Link>
-      </section>
-
-      <section className="max-w-6xl mx-auto px-6 pb-24 grid md:grid-cols-3 gap-8">
-        {[
-          { title: "Editor inteligente", desc: "Autocompletado de etiquetas, cierre automático y resaltado de sintaxis." },
-          { title: "Vista previa en vivo", desc: "Los cambios se reflejan al instante en el panel derecho." },
-          { title: "Modo claro/oscuro", desc: "Cambia el tema cuando quieras; la vista previa siempre se ve clara." },
-        ].map((f) => (
-          <div
-            key={f.title}
-            className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-md border border-slate-200 dark:border-slate-700 hover:shadow-xl transition"
-          >
-            <h3 className="text-xl font-bold mb-3 text-emerald-700 dark:text-emerald-400">{f.title}</h3>
-            <p className="text-slate-600 dark:text-slate-300">{f.desc}</p>
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-20 sm:pt-28 pb-16 text-center">
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 mb-6">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Nuevo: centro de configuración y proyectos
+          </span>
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight mb-6">
+            <span className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 dark:from-white dark:via-slate-100 dark:to-slate-300 bg-clip-text text-transparent">
+              Crea, prueba y
+            </span>
+            <br />
+            <span className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 bg-clip-text text-transparent">
+              publica al instante
+            </span>
+          </h1>
+          <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed">
+            Un playground web con editor profesional, vista previa en tiempo real, cuentas de usuario
+            y un centro de configuración para personalizar tu experiencia.
+          </p>
+          <div className="flex items-center justify-center gap-3 flex-wrap">
+            <Link href="/register" className="btn btn-primary !px-6 !py-3 text-base">
+              Empezar gratis
+            </Link>
+            <Link href="/editor" className="btn btn-ghost !px-6 !py-3 text-base">
+              Abrir editor
+            </Link>
+            <Link href="/dashboard" className="btn btn-ghost !px-6 !py-3 text-base">
+              Mis proyectos
+            </Link>
           </div>
-        ))}
+        </div>
       </section>
 
-      <footer className="border-t border-slate-200 dark:border-slate-700 py-8 text-center text-slate-500 dark:text-slate-400">
-        Dev al instante · Aprende programando
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-20">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+          {features.map((f) => (
+            <div
+              key={f.title}
+              className="group card p-6 hover:-translate-y-0.5 hover:border-emerald-500/30 transition duration-200"
+            >
+              <div className="w-11 h-11 rounded-xl bg-emerald-500/10 text-xl flex items-center justify-center mb-4 group-hover:scale-105 transition">
+                {f.icon}
+              </div>
+              <h3 className="text-base font-semibold mb-2">{f.title}</h3>
+              <p className="text-sm muted leading-relaxed">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <footer className="border-t border-slate-200/60 dark:border-slate-800/60 py-8 text-center text-sm muted">
+        Dev al instante · Aprende, construye y comparte
       </footer>
     </main>
   );
