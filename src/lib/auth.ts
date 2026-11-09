@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import prisma from "@/prisma/client";
 
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || "default-secret-change-me";
@@ -42,6 +43,7 @@ export function verifyToken(token: string): SessionUser | null {
 }
 
 export async function getCurrentUser(): Promise<SessionUser | null> {
+  await connection();
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
   if (!token) return null;
@@ -83,6 +85,7 @@ export async function clearSessionCookie() {
 }
 
 export async function requireAuth() {
+  await connection();
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   return user;

@@ -31,7 +31,7 @@ export function middleware(request: NextRequest) {
   }
 
   if (isAuthenticated && isPublicRoute(pathname)) {
-    return NextResponse.redirect(new URL("/editor", request.url));
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   if (!isAuthenticated && isProtectedRoute(pathname)) {

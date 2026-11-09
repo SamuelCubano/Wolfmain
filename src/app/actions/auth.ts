@@ -61,7 +61,7 @@ export async function registerAction(
 
   await setSessionCookie(user.id, user.email);
 
-  redirect("/editor");
+  redirect("/dashboard");
 }
 
 export async function loginAction(
@@ -97,7 +97,7 @@ export async function loginAction(
 
   await setSessionCookie(user.id, user.email);
 
-  redirect("/editor");
+  redirect("/dashboard");
 }
 
 export async function logoutAction() {
