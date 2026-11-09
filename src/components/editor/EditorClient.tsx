@@ -10,12 +10,15 @@ import {
   saveProjectFileAction,
   deleteProjectFileAction,
   renameProjectFileAction,
+  getProjectHistoryAction,
   type ProjectFile,
+  type FileHistoryEntry,
 } from "@/app/actions/files";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
 type FileNode = ProjectFile & { children?: FileNode[] };
+type EditorView = "code" | "split" | "preview";
 
 function buildTree(files: ProjectFile[]): FileNode[] {
   const byId = new Map<string, FileNode>();
@@ -91,7 +94,6 @@ function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':
 function isExternal(href){
   if(/^https?:\\/\\//i.test(href)||href.startsWith('//')) return true;
   if(/^www\\./i.test(href)) return 'https://'+href;
-  // Bare domains like google.com -> external, but local files like page.html/about.css stay internal.
   if(/^[a-z0-9-]+(\\.[a-z0-9-]+)+([\\/?#].*)?$/i.test(href)){
     var m = href.match(/^([^\\/?#]+)/);
     var host = (m?m[1]:href).toLowerCase();
@@ -108,7 +110,7 @@ function showExternalOverlay(href){
   var wrap=document.createElement('div');
   wrap.id='__wolf_ext_overlay';
   wrap.innerHTML=''
-    +'<div style="position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif">'
+    +'<div style="position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,.55);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif">'
     +'<div style="width:min(720px,100%);background:#0b0b0b;color:#fafafa;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.55);overflow:hidden">'
     +'<div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(255,255,255,.04),transparent)">'
     +'<span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:rgba(16,185,129,.18);color:#34d399;font-weight:700">✓</span>'
@@ -152,6 +154,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
   const [activeId, setActiveId] = useState<string | null>(null);
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
   const [status, setStatus] = useState<string>("");
+  const [statusTone, setStatusTone] = useState<"muted" | "ok" | "err">("muted");
   const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState<null | { parentId: string | null; folder: boolean }>(null);
   const [newName, setNewName] = useState("");
@@ -159,14 +162,26 @@ export default function EditorClient({ projectId }: { projectId: string | null }
   const [renameValue, setRenameValue] = useState("");
   const [wrap, setWrap] = useState(false);
   const [wrapReady, setWrapReady] = useState(false);
+  const [view, setView] = useState<EditorView>("split");
+  const [explorerOpen, setExplorerOpen] = useState(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [commitMessage, setCommitMessage] = useState("");
+  const [history, setHistory] = useState<FileHistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [loadingProject, startProjectLoad] = useTransition();
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const localDrafts = useRef<Map<string, string>>(new Map());
 
   const activeFile = useMemo(() => files.find((f) => f.id === activeId && !f.is_folder) ?? null, [files, activeId]);
   const tree = useMemo(() => buildTree(files), [files]);
+  const showExplorer = !!projectId;
+
+  const setNotice = useCallback((msg: string, tone: "muted" | "ok" | "err" = "muted") => {
+    setStatus(msg);
+    setStatusTone(tone);
+  }, []);
 
   useEffect(() => {
     startTransition(() => {
@@ -180,11 +195,18 @@ export default function EditorClient({ projectId }: { projectId: string | null }
     localStorage.setItem("dev-wrap", wrap ? "1" : "0");
   }, [wrap, wrapReady]);
 
+  const refreshHistory = useCallback(async (pid: string) => {
+    setHistoryLoading(true);
+    const res = await getProjectHistoryAction(pid);
+    if (res.entries) setHistory(res.entries);
+    setHistoryLoading(false);
+  }, []);
+
   useEffect(() => {
     if (!projectId) return;
     let cancelled = false;
     startProjectLoad(async () => {
-      setStatus("");
+      setNotice("", "muted");
       try {
         const data = await getProjectEditorDataAction(projectId);
         if (cancelled) return;
@@ -201,14 +223,16 @@ export default function EditorClient({ projectId }: { projectId: string | null }
             setActiveId(created.file.id);
           }
         }
+        const hist = await getProjectHistoryAction(projectId);
+        if (!cancelled && hist.entries) setHistory(hist.entries);
       } catch (e: unknown) {
-        if (!cancelled) setStatus(e instanceof Error ? e.message : "Error cargando proyecto");
+        if (!cancelled) setNotice(e instanceof Error ? e.message : "Error cargando proyecto", "err");
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [projectId, startProjectLoad]);
+  }, [projectId, startProjectLoad, refreshHistory, setNotice]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -220,9 +244,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
       if (!raw || /^https?:\/\//i.test(raw) || raw.startsWith("//")) return;
       const clean = raw.split("#")[0].split("?")[0].replace(/\\/g, "/");
       const baseDir = (activeFile?.path || "/").replace(/\/[^/]*$/, "") || "/";
-      const joined = clean.startsWith("/")
-        ? clean
-        : `${baseDir}/${clean}`.replace(/\/+/g, "/");
+      const joined = clean.startsWith("/") ? clean : `${baseDir}/${clean}`.replace(/\/+/g, "/");
       const parts: string[] = [];
       for (const seg of joined.split("/")) {
         if (!seg || seg === ".") continue;
@@ -231,7 +253,9 @@ export default function EditorClient({ projectId }: { projectId: string | null }
       }
       const normalized = "/" + parts.join("/");
       const target = files.find(
-        (f) => !f.is_folder && (f.path === normalized || f.name === clean || f.path.endsWith("/" + clean.replace(/^\.\//, "")))
+        (f) =>
+          !f.is_folder &&
+          (f.path === normalized || f.name === clean || f.path.endsWith("/" + clean.replace(/^\.\//, "")))
       );
       if (target) setActiveId(target.id);
     }
@@ -241,49 +265,62 @@ export default function EditorClient({ projectId }: { projectId: string | null }
 
   useEffect(() => {
     if (iframeRef.current) {
-      iframeRef.current.srcdoc = projectId ? buildPreviewHtml(files, activeFile) : files[0]?.content || (activeFile?.content ?? "<h1>Hola mundo</h1>");
+      if (projectId) iframeRef.current.srcdoc = buildPreviewHtml(files, activeFile);
+      else {
+        const solo = files[0]?.content ?? activeFile?.content ?? "<h1>Hola mundo</h1>\n<p>Escribe tu HTML aquí.</p>";
+        iframeRef.current.srcdoc = solo;
+      }
     }
   }, [files, activeFile, projectId]);
-
-  const flushSave = useCallback(
-    async (fileId: string, content: string) => {
-      if (!projectId) return;
-      setStatus("Guardando...");
-      const res = await saveProjectFileAction({ projectId, fileId, content });
-      if (res?.error) {
-        setStatus(res.error);
-      } else {
-        setDirtyIds((prev) => {
-          const next = new Set(prev);
-          next.delete(fileId);
-          return next;
-        });
-        setStatus("Guardado");
-        setTimeout(() => setStatus((s) => (s === "Guardado" ? "" : s)), 1500);
-      }
-    },
-    [projectId]
-  );
 
   const onChangeCode = useCallback(
     (value: string) => {
       if (!activeId) return;
-      localDrafts.current.set(activeId, value);
       setFiles((prev) => prev.map((f) => (f.id === activeId ? { ...f, content: value } : f)));
-      setDirtyIds((prev) => new Set(prev).add(activeId));
-      if (projectId) {
-        if (saveTimer.current) clearTimeout(saveTimer.current);
-        saveTimer.current = setTimeout(() => flushSave(activeId, value), 700);
-      }
+      if (projectId) setDirtyIds((prev) => new Set(prev).add(activeId));
     },
-    [activeId, projectId, flushSave]
+    [activeId, projectId]
   );
+
+  const commitSave = useCallback(async () => {
+    if (!projectId || !activeFile) return;
+    const message = commitMessage.trim();
+    if (!message) {
+      setNotice("Escribe un mensaje para el historial de cambios.", "err");
+      return;
+    }
+    const content = activeFile.content ?? "";
+    startTransition(async () => {
+      setNotice("Guardando cambios...", "muted");
+      const res = await saveProjectFileAction({
+        projectId,
+        fileId: activeFile.id,
+        content,
+        recordHistory: true,
+        commitMessage: message,
+      });
+      if (res?.error) {
+        setNotice(res.error, "err");
+        return;
+      }
+      setDirtyIds((prev) => {
+        const next = new Set(prev);
+        next.delete(activeFile.id);
+        return next;
+      });
+      setCommitMessage("");
+      setSaveOpen(false);
+      setNotice("Proyecto guardado en el historial.", "ok");
+      await refreshHistory(projectId);
+      setTimeout(() => setStatus((s) => (s === "Proyecto guardado en el historial." ? "" : s)), 2200);
+    });
+  }, [projectId, activeFile, commitMessage, refreshHistory, setNotice]);
 
   async function handleCreate() {
     if (!projectId || !creating) return;
     const name = newName.trim();
     if (!name) return;
-    setStatus("");
+    setNotice("", "muted");
     startTransition(async () => {
       const res = await createProjectFileAction({
         projectId,
@@ -291,7 +328,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
         parentId: creating.parentId,
         isFolder: creating.folder,
       });
-      if (res.error) setStatus(res.error);
+      if (res.error) setNotice(res.error, "err");
       else if (res.file) {
         setFiles((prev) => [...prev, res.file!]);
         if (creating.folder) setOpenFolders((s) => new Set(s).add(res.file!.id));
@@ -308,9 +345,11 @@ export default function EditorClient({ projectId }: { projectId: string | null }
     if (!confirm(`¿Eliminar ${file.is_folder ? "la carpeta" : "el archivo"} "${file.name}"?`)) return;
     startTransition(async () => {
       const res = await deleteProjectFileAction({ projectId, fileId: file.id });
-      if (res.error) setStatus(res.error);
+      if (res.error) setNotice(res.error, "err");
       else {
-        setFiles((prev) => prev.filter((f) => f.id !== file.id && f.parent_id !== file.id && !f.path.startsWith(file.path + "/")));
+        setFiles((prev) =>
+          prev.filter((f) => f.id !== file.id && f.parent_id !== file.id && !f.path.startsWith(file.path + "/"))
+        );
         if (activeId === file.id) setActiveId(null);
       }
     });
@@ -325,7 +364,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
     }
     startTransition(async () => {
       const res = await renameProjectFileAction({ projectId, fileId: file.id, name });
-      if (res.error) setStatus(res.error);
+      if (res.error) setNotice(res.error, "err");
       else if (res.file) {
         setFiles((prev) => prev.map((f) => (f.id === file.id ? res.file! : f)));
         setRenamingId(null);
@@ -350,15 +389,18 @@ export default function EditorClient({ projectId }: { projectId: string | null }
     return (
       <div key={node.id}>
         <div
-          className={`group flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm cursor-pointer select-none ${
+          className={`group flex items-center gap-1.5 rounded-lg px-2 py-2 text-sm cursor-pointer select-none transition ${
             isActive
               ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-              : "text-slate-700 dark:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800/70"
+              : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
           }`}
           style={{ paddingLeft: `${8 + depth * 12}px` }}
           onClick={() => {
             if (node.is_folder) toggleFolder(node.id);
-            else setActiveId(node.id);
+            else {
+              setActiveId(node.id);
+              if (typeof window !== "undefined" && window.innerWidth < 1024) setExplorerOpen(false);
+            }
           }}
         >
           <span className="w-4 text-center text-xs opacity-70">{node.is_folder ? (isOpen ? "▾" : "▸") : ""}</span>
@@ -374,7 +416,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                 if (e.key === "Escape") setRenamingId(null);
               }}
               onClick={(e) => e.stopPropagation()}
-              className="flex-1 min-w-0 rounded bg-white/80 dark:bg-slate-900/60 border border-emerald-500/40 px-1 py-0.5 text-xs outline-none"
+              className="flex-1 min-w-0 rounded bg-white dark:bg-slate-900 border border-emerald-500/40 px-1 py-0.5 text-xs outline-none"
             />
           ) : (
             <span className="flex-1 truncate" title={node.path}>
@@ -383,7 +425,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
             </span>
           )}
           {projectId && !isRenaming && (
-            <span className="hidden group-hover:flex items-center gap-0.5">
+            <span className="flex lg:hidden lg:group-hover:flex items-center gap-0.5">
               {node.is_folder && (
                 <button
                   title="Nuevo archivo"
@@ -393,9 +435,9 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                     setCreating({ parentId: node.id, folder: false });
                     setNewName("");
                   }}
-                  className="px-1 rounded hover:bg-slate-300/50 dark:hover:bg-slate-700"
+                  className="px-1.5 py-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-xs"
                 >
-                  +f
+                  +
                 </button>
               )}
               <button
@@ -405,7 +447,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                   setRenamingId(node.id);
                   setRenameValue(node.name);
                 }}
-                className="px-1 rounded hover:bg-slate-300/50 dark:hover:bg-slate-700"
+                className="px-1.5 py-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-xs"
               >
                 ✎
               </button>
@@ -415,7 +457,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                   e.stopPropagation();
                   handleDelete(node);
                 }}
-                className="px-1 rounded text-red-500 hover:bg-red-500/10"
+                className="px-1.5 py-0.5 rounded text-red-500 hover:bg-red-500/10 text-xs"
               >
                 ×
               </button>
@@ -434,7 +476,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                 if (e.key === "Escape") setCreating(null);
               }}
               placeholder={creating.folder ? "nombre-carpeta" : "archivo.html"}
-              className="w-full rounded-lg bg-white/80 dark:bg-slate-900/60 border border-emerald-500/40 px-2 py-1 text-xs outline-none"
+              className="w-full rounded-lg bg-white dark:bg-slate-900 border border-emerald-500/40 px-2 py-1.5 text-xs outline-none"
             />
           </div>
         )}
@@ -442,39 +484,104 @@ export default function EditorClient({ projectId }: { projectId: string | null }
     );
   }
 
-  const showExplorer = !!projectId;
+  const canSave = !!projectId && !!activeFile && dirtyIds.has(activeFile.id);
+  const statusClass =
+    statusTone === "ok" ? "text-emerald-600 dark:text-emerald-400" : statusTone === "err" ? "text-red-600 dark:text-red-400" : "muted";
 
   return (
     <main className="flex-1 app-bg flex flex-col min-h-0">
-      <div className="border-b border-slate-200/60 dark:border-slate-800/60 bg-white/40 dark:bg-slate-950/30 backdrop-blur">
-        <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-2.5 flex justify-between items-center flex-wrap gap-2">
-          <div className="flex items-center gap-3 min-w-0">
+      <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+        <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-3 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-wrap">
+            {showExplorer && (
+              <button
+                onClick={() => setExplorerOpen((v) => !v)}
+                className="btn btn-ghost !py-1.5 !px-2.5 text-sm lg:hidden"
+                aria-label="Explorador"
+              >
+                ☰
+              </button>
+            )}
             <h1 className="text-sm sm:text-base font-bold tracking-tight truncate">
-              {projectName ? projectName : "Editor en vivo"}
+              {projectName ? projectName : "Editor rápido"}
             </h1>
             {projectId ? (
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                 Proyecto
               </span>
             ) : (
-              <span className="text-[11px] muted">Modo rápido (sin guardar)</span>
+              <span className="text-[11px] muted">Sin guardar en la nube</span>
             )}
-            {status && <span className="text-[11px] muted">{status}</span>}
+            {canSave && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">Cambios sin guardar</span>}
+            {status && <span className={`text-[11px] ${statusClass}`}>{status}</span>}
           </div>
-          <div className="flex gap-2 items-center">
-            <Link href="/dashboard" className="btn btn-ghost !py-1.5 text-sm">Dashboard</Link>
-            <button onClick={() => setWrap(!wrap)} className="btn btn-ghost !py-1.5 text-sm" suppressHydrationWarning>
+
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 p-0.5 bg-slate-50 dark:bg-slate-900">
+              {([
+                ["code", "Código"],
+                ["split", "Split"],
+                ["preview", "Vista"],
+              ] as const).map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setView(id)}
+                  className={`px-2.5 py-1.5 text-xs sm:text-sm rounded-lg font-semibold transition ${
+                    view === id ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm" : "text-slate-600 dark:text-slate-300"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setWrap(!wrap)} className="btn btn-ghost !py-1.5 text-xs sm:text-sm" suppressHydrationWarning>
               Wrap: {wrap ? "ON" : "OFF"}
             </button>
+            {projectId && (
+              <>
+                <button
+                  onClick={async () => {
+                    const next = !historyOpen;
+                    setHistoryOpen(next);
+                    if (next) await refreshHistory(projectId);
+                  }}
+                  className="btn btn-ghost !py-1.5 text-xs sm:text-sm"
+                >
+                  Historial
+                </button>
+                <button
+                  onClick={() => setSaveOpen(true)}
+                  disabled={!activeFile || isPending}
+                  className="btn btn-primary !py-1.5 text-xs sm:text-sm"
+                >
+                  Guardar cambios
+                </button>
+              </>
+            )}
+            <Link href="/dashboard" className="btn btn-ghost !py-1.5 text-xs sm:text-sm">
+              Salir al dashboard
+            </Link>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 max-w-[1600px] w-full mx-auto p-3 sm:p-4">
-        <div className={`grid gap-3 sm:gap-4 h-[calc(100vh-10.5rem)] min-h-[520px] ${showExplorer ? "grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_minmax(0,1fr)]" : "grid-cols-1 lg:grid-cols-2"}`}>
+      <div className="flex-1 min-h-0 max-w-[1600px] w-full mx-auto p-2 sm:p-4 relative">
+        <div
+          className={`grid gap-2 sm:gap-4 h-[calc(100dvh-11.5rem)] min-h-[420px] ${
+            showExplorer
+              ? view === "split"
+                ? "grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_minmax(0,1fr)]"
+                : "grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)]"
+              : view === "split"
+                ? "grid-cols-1 md:grid-cols-2"
+                : "grid-cols-1"
+          }`}
+        >
           {showExplorer && (
-            <aside className="card overflow-hidden flex flex-col min-h-0">
-              <div className="px-3 py-2.5 bg-slate-100/70 dark:bg-slate-800/60 border-b border-slate-200/60 dark:border-slate-700/50 flex items-center justify-between">
+            <aside
+              className={`${explorerOpen ? "flex" : "hidden lg:flex"} card overflow-hidden flex-col min-h-0 absolute inset-x-2 top-2 bottom-2 z-20 lg:static lg:z-auto`}
+            >
+              <div className="px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
                 <span className="text-[11px] font-bold muted uppercase tracking-wider">Explorador</span>
                 <div className="flex gap-1">
                   <button
@@ -483,7 +590,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                       setCreating({ parentId: null, folder: false });
                       setNewName("");
                     }}
-                    className="text-xs px-1.5 py-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700"
+                    className="text-xs px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
                     + Archivo
                   </button>
@@ -493,9 +600,12 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                       setCreating({ parentId: null, folder: true });
                       setNewName("");
                     }}
-                    className="text-xs px-1.5 py-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700"
+                    className="text-xs px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
                     + Carpeta
+                  </button>
+                  <button onClick={() => setExplorerOpen(false)} className="lg:hidden text-xs px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                    Cerrar
                   </button>
                 </div>
               </div>
@@ -516,7 +626,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                             if (e.key === "Escape") setCreating(null);
                           }}
                           placeholder={creating.folder ? "nombre-carpeta" : "archivo.html"}
-                          className="w-full rounded-lg bg-white/80 dark:bg-slate-900/60 border border-emerald-500/40 px-2 py-1 text-xs outline-none"
+                          className="w-full rounded-lg bg-white dark:bg-slate-900 border border-emerald-500/40 px-2 py-1.5 text-xs outline-none"
                         />
                       </div>
                     )}
@@ -529,69 +639,152 @@ export default function EditorClient({ projectId }: { projectId: string | null }
             </aside>
           )}
 
-          <section className="card overflow-hidden flex flex-col min-h-0">
-            <div className="px-4 py-2.5 bg-slate-100/70 dark:bg-slate-800/60 border-b border-slate-200/60 dark:border-slate-700/50 flex items-center gap-2 min-w-0">
-              <span className="flex gap-1.5 shrink-0">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-400/90" />
-                <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/90" />
-                <span className="w-2.5 h-2.5 rounded-full bg-green-400/90" />
-              </span>
-              <span className="text-xs font-semibold muted uppercase tracking-wide truncate">
-                {activeFile ? activeFile.path : "Editor"}
-              </span>
-              {isPending && <span className="text-[10px] muted">…</span>}
-            </div>
-            <div className="flex-1 min-h-0">
-              {projectId && !activeFile && !loadingProject ? (
-                <div className="h-full flex items-center justify-center p-6 text-center">
-                  <div>
-                    <p className="font-semibold mb-1">Selecciona un archivo</p>
-                    <p className="text-sm muted">Elige un archivo del explorador o crea uno nuevo.</p>
+          {(view === "code" || view === "split") && (
+            <section className="card overflow-hidden flex flex-col min-h-0">
+              <div className="px-3 sm:px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 min-w-0">
+                <span className="text-xs font-semibold muted uppercase tracking-wide truncate">
+                  {activeFile ? activeFile.path : "Editor"}
+                </span>
+                {dirtyIds.has(activeFile?.id || "") && <span className="text-[10px] text-amber-600 dark:text-amber-400">sin guardar</span>}
+                {isPending && <span className="text-[10px] muted">…</span>}
+              </div>
+              <div className="flex-1 min-h-0">
+                {projectId && !activeFile && !loadingProject ? (
+                  <div className="h-full flex items-center justify-center p-6 text-center">
+                    <div>
+                      <p className="font-semibold mb-1">Selecciona un archivo</p>
+                      <p className="text-sm muted">Elige un archivo del explorador o crea uno nuevo.</p>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <MonacoEditor
-                  height="100%"
-                  language={projectId ? languageFor(activeFile) : "html"}
-                  theme={isDark ? "vs-dark" : "light"}
-                  value={activeFile?.content ?? (projectId ? "" : "<h1>Hola mundo</h1>\n<p>Escribe tu HTML aquí.</p>")}
-                  onChange={(v) => {
-                    if (projectId) onChangeCode(v || "");
-                    else setFiles([{ id: "local", name: "index.html", path: "/index.html", content: v || "", is_folder: false, parent_id: null, file_type: "html", language: "html", updated_at: new Date() }]);
-                  }}
-                  options={{
-                    wordWrap: wrap ? "on" : "off",
-                    automaticLayout: true,
-                    minimap: { enabled: false },
-                    fontSize: 14,
-                    padding: { top: 12 },
-                    readOnly: !!projectId && !activeFile,
-                  }}
-                  loading={<div className="p-4 text-sm muted">Cargando editor…</div>}
-                />
-              )}
-            </div>
-          </section>
+                ) : (
+                  <MonacoEditor
+                    height="100%"
+                    language={projectId ? languageFor(activeFile) : "html"}
+                    theme={isDark ? "vs-dark" : "light"}
+                    value={activeFile?.content ?? (projectId ? "" : "<h1>Hola mundo</h1>\n<p>Escribe tu HTML aquí.</p>")}
+                    onChange={(v) => {
+                      if (projectId) onChangeCode(v || "");
+                      else
+                        setFiles([
+                          {
+                            id: "local",
+                            name: "index.html",
+                            path: "/index.html",
+                            content: v || "",
+                            is_folder: false,
+                            parent_id: null,
+                            file_type: "html",
+                            language: "html",
+                            updated_at: new Date(),
+                          },
+                        ]);
+                    }}
+                    options={{
+                      wordWrap: wrap ? "on" : "off",
+                      automaticLayout: true,
+                      minimap: { enabled: false },
+                      fontSize: 14,
+                      padding: { top: 12 },
+                      readOnly: !!projectId && !activeFile,
+                      scrollBeyondLastLine: false,
+                    }}
+                    loading={<div className="p-4 text-sm muted">Cargando editor…</div>}
+                  />
+                )}
+              </div>
+            </section>
+          )}
 
-          <section className="card overflow-hidden flex flex-col min-h-0">
-            <div className="px-4 py-2.5 bg-slate-100/70 dark:bg-slate-800/60 border-b border-slate-200/60 dark:border-slate-700/50 flex items-center gap-2">
-              <span className="flex gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-400/90" />
-                <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/90" />
-                <span className="w-2.5 h-2.5 rounded-full bg-green-400/90" />
-              </span>
-              <span className="text-xs font-semibold muted uppercase tracking-wide">Vista previa</span>
-            </div>
-            <div className="flex-1 min-h-0 p-2 bg-slate-50 dark:bg-slate-900/40">
-              <iframe
-                ref={iframeRef}
-                title="Vista previa"
-                className="w-full h-full border-0 rounded-xl bg-white shadow-sm"
-                sandbox="allow-scripts"
-              />
-            </div>
-          </section>
+          {(view === "preview" || view === "split") && (
+            <section className="card overflow-hidden flex flex-col min-h-0">
+              <div className="px-3 sm:px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
+                <span className="text-xs font-semibold muted uppercase tracking-wide">Vista previa</span>
+              </div>
+              <div className="flex-1 min-h-0 p-2 bg-slate-100 dark:bg-slate-900">
+                <iframe
+                  ref={iframeRef}
+                  title="Vista previa"
+                  className="w-full h-full border border-slate-200 dark:border-slate-800 rounded-xl bg-white"
+                  sandbox="allow-scripts"
+                />
+              </div>
+            </section>
+          )}
         </div>
+
+        {saveOpen && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/20">
+            <div className="w-full max-w-lg card p-5 sm:p-6 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950">
+              <h2 className="text-lg font-bold">Guardar en historial</h2>
+              <p className="text-sm muted mt-1">
+                Describe qué cambiaste. Este mensaje es obligatorio y quedará en la evolución del proyecto.
+              </p>
+              <div className="mt-4">
+                <label className="text-sm font-semibold">Mensaje del cambio</label>
+                <textarea
+                  value={commitMessage}
+                  onChange={(e) => setCommitMessage(e.target.value)}
+                  rows={4}
+                  placeholder="Ej: Agregué la sección de contacto y ajusté estilos móviles"
+                  className="input mt-1.5 resize-y"
+                  autoFocus
+                />
+              </div>
+              {statusTone === "err" && status && <p className="text-sm text-red-600 dark:text-red-400 mt-2">{status}</p>}
+              <div className="mt-5 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                <button onClick={() => setSaveOpen(false)} className="btn btn-ghost">
+                  Cancelar
+                </button>
+                <button onClick={commitSave} disabled={isPending || !commitMessage.trim()} className="btn btn-primary">
+                  {isPending ? "Guardando..." : "Guardar versión"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {historyOpen && (
+          <div className="absolute inset-y-2 right-2 sm:right-4 z-20 w-[min(420px,calc(100%-1rem))]">
+            <div className="card h-full flex flex-col overflow-hidden bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+              <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+                <div>
+                  <h2 className="font-bold">Historial de cambios</h2>
+                  <p className="text-xs muted">Evolución del proyecto (últimas 50 versiones)</p>
+                </div>
+                <button onClick={() => setHistoryOpen(false)} className="btn btn-ghost !py-1.5 !px-2.5 text-sm">
+                  Cerrar
+                </button>
+              </div>
+              <div className="flex-1 overflow-auto p-3 space-y-2">
+                {historyLoading ? (
+                  <p className="text-sm muted p-2">Cargando historial...</p>
+                ) : history.length === 0 ? (
+                  <p className="text-sm muted p-2">Aún no hay versiones guardadas. Usa “Guardar cambios” y escribe un mensaje.</p>
+                ) : (
+                  history.map((h) => (
+                    <article key={h.id} className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 bg-slate-50/70 dark:bg-slate-900/50">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-semibold leading-snug">{h.commit_message || "Sin mensaje"}</p>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0">
+                          v{h.version_number}
+                        </span>
+                      </div>
+                      <p className="text-xs muted mt-1 truncate" title={h.file_path}>
+                        {h.file_path}
+                      </p>
+                      <p className="text-[11px] muted mt-1">
+                        {new Date(h.created_at).toLocaleString("es-ES", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </p>
+                    </article>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );

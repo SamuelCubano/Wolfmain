@@ -68,10 +68,7 @@ export default function DashboardClient({
   return (
     <main className="flex-1 app-bg">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        <section className="card p-5 sm:p-7 mb-6 overflow-hidden relative">
-          <div className="absolute inset-0 pointer-events-none opacity-60">
-            <div className="absolute -top-24 -right-16 w-72 h-72 rounded-full bg-emerald-500/15 blur-3xl" />
-          </div>
+        <section className="card p-5 sm:p-7 mb-6 relative">
           <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
             <div>
               <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-1">Dashboard</p>

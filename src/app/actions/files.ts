@@ -5,6 +5,15 @@ import { z } from "zod";
 import { requireAuth } from "@/lib/auth";
 import prisma from "@/prisma/client";
 
+export type FileHistoryEntry = {
+  id: string;
+  commit_message: string | null;
+  version_number: number;
+  created_at: Date;
+  file_name: string;
+  file_path: string;
+};
+
 export type ProjectFile = {
   id: string;
   name: string;
@@ -152,20 +161,77 @@ export async function saveProjectFileAction(input: {
   projectId: string;
   fileId: string;
   content: string;
+  commitMessage?: string;
+  recordHistory?: boolean;
 }) {
   const user = await requireAuth();
   await assertProjectOwner(input.projectId, user.id);
   const file = await prisma.file.findFirst({
     where: { id: input.fileId, project_id: input.projectId, is_folder: false },
-    select: { id: true },
+    select: { id: true, content: true },
   });
   if (!file) return { error: "Archivo no encontrado" };
-  const updated = await prisma.file.update({
-    where: { id: input.fileId },
-    data: { content: input.content, size: input.content.length },
-    select: { id: true, updated_at: true },
+
+  const nextContent = input.content;
+  const shouldRecord = !!input.recordHistory;
+  const message = (input.commitMessage || "").trim();
+  if (shouldRecord && !message) return { error: "El mensaje del cambio es obligatorio" };
+
+  const updated = await prisma.$transaction(async (tx) => {
+    if (shouldRecord) {
+      if ((file.content ?? "") !== nextContent) {
+        const last = await tx.fileVersion.findFirst({
+          where: { file_id: input.fileId },
+          orderBy: { version_number: "desc" },
+          select: { version_number: true },
+        });
+        await tx.fileVersion.create({
+          data: {
+            file_id: input.fileId,
+            content: nextContent,
+            commit_message: message,
+            version_number: (last?.version_number ?? 0) + 1,
+            created_by: user.id,
+          },
+        });
+      }
+    }
+
+    return tx.file.update({
+      where: { id: input.fileId },
+      data: { content: nextContent, size: nextContent.length },
+      select: { id: true, updated_at: true },
+    });
   });
+
   return { file: updated };
+}
+
+export async function getProjectHistoryAction(projectId: string): Promise<{ entries?: FileHistoryEntry[]; error?: string }> {
+  const user = await requireAuth();
+  await assertProjectOwner(projectId, user.id);
+  const versions = await prisma.fileVersion.findMany({
+    where: { file: { project_id: projectId } },
+    select: {
+      id: true,
+      commit_message: true,
+      version_number: true,
+      created_at: true,
+      file: { select: { name: true, path: true } },
+    },
+    orderBy: { created_at: "desc" },
+    take: 50,
+  });
+  return {
+    entries: versions.map((v) => ({
+      id: v.id,
+      commit_message: v.commit_message,
+      version_number: v.version_number,
+      created_at: v.created_at,
+      file_name: v.file.name,
+      file_path: v.file.path,
+    })),
+  };
 }
 
 export async function deleteProjectFileAction(input: {
