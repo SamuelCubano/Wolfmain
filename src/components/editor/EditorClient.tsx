@@ -90,13 +90,20 @@ function buildPreviewHtml(files: ProjectFile[], active: ProjectFile | null): str
 function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function isExternal(href){
   if(/^https?:\\/\\//i.test(href)||href.startsWith('//')) return true;
-  if(/^[a-z0-9.-]+\\.[a-z]{2,}([\\/:?#].*)?$/i.test(href)) return true;
-  if(/^www\\./i.test(href)) return true;
+  if(/^www\\./i.test(href)) return 'https://'+href;
+  // Bare domains like google.com -> external, but local files like page.html/about.css stay internal.
+  if(/^[a-z0-9-]+(\\.[a-z0-9-]+)+([\\/?#].*)?$/i.test(href)){
+    var m = href.match(/^([^\\/?#]+)/);
+    var host = (m?m[1]:href).toLowerCase();
+    var last = host.split('.').pop();
+    var fileExts = {html:1,htm:1,css:1,js:1,mjs:1,cjs:1,json:1,md:1,txt:1,svg:1,png:1,jpg:1,jpeg:1,gif:1,webp:1,ico:1,map:1,xml:1,ts:1,tsx:1,jsx:1};
+    if(!fileExts[last]) return 'https://'+href;
+  }
   return false;
 }
 function showExternalOverlay(href){
   var existing=document.getElementById('__wolf_ext_overlay'); if(existing) existing.remove();
-  var dest=href;
+  var dest=String(href||'');
   if(!/^https?:\\/\\//i.test(dest)&&!dest.startsWith('//')) dest='https://'+dest.replace(/^\\/*/,'');
   var wrap=document.createElement('div');
   wrap.id='__wolf_ext_overlay';
@@ -126,7 +133,8 @@ document.addEventListener('click',function(e){
   if(!a) return;
   const href=(a.getAttribute('href')||'').trim();
   if(!href||href.startsWith('#')||href.startsWith('javascript:')||href.startsWith('mailto:')||href.startsWith('tel:')) return;
-  if(isExternal(href)){ e.preventDefault(); e.stopPropagation(); showExternalOverlay(href); return; }
+  var ext=isExternal(href);
+  if(ext){ e.preventDefault(); e.stopPropagation(); showExternalOverlay(ext===true?href:ext); return; }
   e.preventDefault();
   send(href);
 },true);
