@@ -86,6 +86,20 @@ function buildPreviewHtml(files: ProjectFile[], active: ProjectFile | null): str
     if (js && (key.endsWith(".js") || key.endsWith(".mjs"))) return `<script ${pre}${post} data-src="${key}">\n${js.content || ""}\n</script>`;
     return m;
   });
+  const navScript = `<script>(function(){
+const send=(path)=>{try{parent.postMessage({type:'wolf-preview-nav',path:String(path||'')},'*')}catch(e){}};
+document.addEventListener('click',function(e){
+  const a=e.target&&e.target.closest?e.target.closest('a[href]'):null;
+  if(!a) return;
+  const href=a.getAttribute('href')||'';
+  if(!href||href.startsWith('#')||href.startsWith('javascript:')||href.startsWith('mailto:')||href.startsWith('tel:')) return;
+  if(/^https?:\\/\\//i.test(href)||href.startsWith('//')){ e.preventDefault(); return; }
+  e.preventDefault();
+  send(href);
+},true);
+})();</script>`;
+  if (/<\/body\s*>/i.test(html)) html = html.replace(/<\/body\s*>/i, `${navScript}\n</body>`);
+  else html += `\n${navScript}`;
   return html;
 }
 
@@ -154,6 +168,35 @@ export default function EditorClient({ projectId }: { projectId: string | null }
       cancelled = true;
     };
   }, [projectId, startProjectLoad]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    function onMessage(e: MessageEvent) {
+      if (e.source !== iframeRef.current?.contentWindow) return;
+      const data = e.data as { type?: string; path?: string } | null;
+      if (!data || data.type !== "wolf-preview-nav") return;
+      const raw = (data.path || "").trim();
+      if (!raw || /^https?:\/\//i.test(raw) || raw.startsWith("//")) return;
+      const clean = raw.split("#")[0].split("?")[0].replace(/\\/g, "/");
+      const baseDir = (activeFile?.path || "/").replace(/\/[^/]*$/, "") || "/";
+      const joined = clean.startsWith("/")
+        ? clean
+        : `${baseDir}/${clean}`.replace(/\/+/g, "/");
+      const parts: string[] = [];
+      for (const seg of joined.split("/")) {
+        if (!seg || seg === ".") continue;
+        if (seg === "..") parts.pop();
+        else parts.push(seg);
+      }
+      const normalized = "/" + parts.join("/");
+      const target = files.find(
+        (f) => !f.is_folder && (f.path === normalized || f.name === clean || f.path.endsWith("/" + clean.replace(/^\.\//, "")))
+      );
+      if (target) setActiveId(target.id);
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [projectId, files, activeFile]);
 
   useEffect(() => {
     if (iframeRef.current) {
