@@ -102,10 +102,8 @@ export default function EditorClient({ projectId }: { projectId: string | null }
   const [newName, setNewName] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const [wrap, setWrap] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("dev-wrap") === "1";
-  });
+  const [wrap, setWrap] = useState(false);
+  const [wrapReady, setWrapReady] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [loadingProject, startProjectLoad] = useTransition();
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -116,8 +114,16 @@ export default function EditorClient({ projectId }: { projectId: string | null }
   const tree = useMemo(() => buildTree(files), [files]);
 
   useEffect(() => {
+    startTransition(() => {
+      setWrap(localStorage.getItem("dev-wrap") === "1");
+      setWrapReady(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!wrapReady) return;
     localStorage.setItem("dev-wrap", wrap ? "1" : "0");
-  }, [wrap]);
+  }, [wrap, wrapReady]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -373,7 +379,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
           </div>
           <div className="flex gap-2 items-center">
             <Link href="/dashboard" className="btn btn-ghost !py-1.5 text-sm">Dashboard</Link>
-            <button onClick={() => setWrap(!wrap)} className="btn btn-ghost !py-1.5 text-sm">
+            <button onClick={() => setWrap(!wrap)} className="btn btn-ghost !py-1.5 text-sm" suppressHydrationWarning>
               Wrap: {wrap ? "ON" : "OFF"}
             </button>
           </div>
