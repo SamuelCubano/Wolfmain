@@ -87,13 +87,46 @@ function buildPreviewHtml(files: ProjectFile[], active: ProjectFile | null): str
     return m;
   });
   const navScript = `<script>(function(){
+function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function isExternal(href){
+  if(/^https?:\\/\\//i.test(href)||href.startsWith('//')) return true;
+  if(/^[a-z0-9.-]+\\.[a-z]{2,}([\\/:?#].*)?$/i.test(href)) return true;
+  if(/^www\\./i.test(href)) return true;
+  return false;
+}
+function showExternalOverlay(href){
+  var existing=document.getElementById('__wolf_ext_overlay'); if(existing) existing.remove();
+  var dest=href;
+  if(!/^https?:\\/\\//i.test(dest)&&!dest.startsWith('//')) dest='https://'+dest.replace(/^\\/*/,'');
+  var wrap=document.createElement('div');
+  wrap.id='__wolf_ext_overlay';
+  wrap.innerHTML=''
+    +'<div style="position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif">'
+    +'<div style="width:min(720px,100%);background:#0b0b0b;color:#fafafa;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.55);overflow:hidden">'
+    +'<div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(255,255,255,.04),transparent)">'
+    +'<span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:rgba(16,185,129,.18);color:#34d399;font-weight:700">✓</span>'
+    +'<span style="font-size:13px;font-weight:600;letter-spacing:.01em">Navegación externa detectada</span>'
+    +'</div>'
+    +'<div style="padding:20px 18px 8px">'
+    +'<p style="margin:0 0 10px;font-size:18px;line-height:1.35;font-weight:600;color:#fff">Este botón te redirigiría a un sitio externo</p>'
+    +'<p style="margin:0 0 14px;font-size:14px;line-height:1.55;color:rgba(255,255,255,.72)">Por seguridad, el visor de la plataforma no abre páginas fuera del proyecto. El enlace apunta a:</p>'
+    +'<div style="margin:0 0 6px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:#a7f3d0;word-break:break-all">'+esc(dest)+'</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:10px;justify-content:flex-end;padding:14px 18px 18px">'
+    +'<button id="__wolf_ext_back" style="appearance:none;border:1px solid rgba(255,255,255,.16);background:#fff;color:#111;padding:9px 14px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Volver atrás</button>'
+    +'</div></div></div>';
+  document.body.appendChild(wrap);
+  var back=document.getElementById('__wolf_ext_back');
+  if(back) back.addEventListener('click',function(){ wrap.remove(); });
+  wrap.addEventListener('click',function(e){ if(e.target===wrap.firstChild) wrap.remove(); });
+}
 const send=(path)=>{try{parent.postMessage({type:'wolf-preview-nav',path:String(path||'')},'*')}catch(e){}};
 document.addEventListener('click',function(e){
   const a=e.target&&e.target.closest?e.target.closest('a[href]'):null;
   if(!a) return;
-  const href=a.getAttribute('href')||'';
+  const href=(a.getAttribute('href')||'').trim();
   if(!href||href.startsWith('#')||href.startsWith('javascript:')||href.startsWith('mailto:')||href.startsWith('tel:')) return;
-  if(/^https?:\\/\\//i.test(href)||href.startsWith('//')){ e.preventDefault(); return; }
+  if(isExternal(href)){ e.preventDefault(); e.stopPropagation(); showExternalOverlay(href); return; }
   e.preventDefault();
   send(href);
 },true);
