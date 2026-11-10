@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || "default-secret-change-me";
+const JWT_SECRET = process.env.NEXTAUTH_SECRET!;
+if (!JWT_SECRET) throw new Error("NEXTAUTH_SECRET environment variable is required");
 const COOKIE_NAME = "wolfmain_session";
 
 const PUBLIC_ROUTES = ["/login", "/register"];

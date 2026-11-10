@@ -90,7 +90,7 @@ export default function Home() {
       </section>
 
       <footer className="border-t border-slate-200/60 dark:border-slate-800/60 py-8 text-center text-sm muted">
-        Dev al instante · Aprende, construye y comparte
+        Wolfmain · Aprende, construye y comparte
       </footer>
     </main>
   );

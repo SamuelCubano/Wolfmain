@@ -169,9 +169,11 @@ export default function EditorClient({ projectId }: { projectId: string | null }
   const [commitMessage, setCommitMessage] = useState("");
   const [history, setHistory] = useState<FileHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState<{ message: string; at: number } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [loadingProject, startProjectLoad] = useTransition();
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveSuccessTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const activeFile = useMemo(() => files.find((f) => f.id === activeId && !f.is_folder) ?? null, [files, activeId]);
@@ -264,6 +266,12 @@ export default function EditorClient({ projectId }: { projectId: string | null }
   }, [projectId, files, activeFile]);
 
   useEffect(() => {
+    return () => {
+      if (saveSuccessTimer.current) clearTimeout(saveSuccessTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
     if (iframeRef.current) {
       if (projectId) iframeRef.current.srcdoc = buildPreviewHtml(files, activeFile);
       else {
@@ -290,11 +298,12 @@ export default function EditorClient({ projectId }: { projectId: string | null }
       return;
     }
     const content = activeFile.content ?? "";
+    const fileId = activeFile.id;
     startTransition(async () => {
       setNotice("Guardando cambios...", "muted");
       const res = await saveProjectFileAction({
         projectId,
-        fileId: activeFile.id,
+        fileId,
         content,
         recordHistory: true,
         commitMessage: message,
@@ -305,14 +314,19 @@ export default function EditorClient({ projectId }: { projectId: string | null }
       }
       setDirtyIds((prev) => {
         const next = new Set(prev);
-        next.delete(activeFile.id);
+        next.delete(fileId);
         return next;
       });
-      setCommitMessage("");
       setSaveOpen(false);
-      setNotice("Proyecto guardado en el historial.", "ok");
-      await refreshHistory(projectId);
-      setTimeout(() => setStatus((s) => (s === "Proyecto guardado en el historial." ? "" : s)), 2200);
+      setCommitMessage("");
+      setNotice("Guardado exitoso", "ok");
+      const at = Date.now();
+      setSaveSuccess({ message, at });
+      if (saveSuccessTimer.current) clearTimeout(saveSuccessTimer.current);
+      saveSuccessTimer.current = setTimeout(() => {
+        setSaveSuccess((current) => (current?.at === at ? null : current));
+      }, 4200);
+      void refreshHistory(projectId);
     });
   }, [projectId, activeFile, commitMessage, refreshHistory, setNotice]);
 
@@ -711,6 +725,48 @@ export default function EditorClient({ projectId }: { projectId: string | null }
             </section>
           )}
         </div>
+
+        {saveSuccess && (
+          <div
+            className="fixed right-4 bottom-4 z-[60] w-[min(420px,calc(100vw-2rem))] pointer-events-none"
+            aria-live="polite"
+            role="status"
+          >
+            <div className="pointer-events-auto rounded-2xl border border-emerald-500/25 bg-white/95 dark:bg-slate-950/95 shadow-[0_20px_60px_-20px_rgba(16,185,129,.55)] backdrop-blur-sm overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-400" />
+              <div className="p-4 flex gap-3 items-start">
+                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/20">
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden="true">
+                    <path
+                      fillRule="evenodd"
+                      d="M16.704 5.29a1 1 0 010 1.415l-7.2 7.2a1 1 0 01-1.415 0l-3.2-3.2a1 1 0 111.415-1.414l2.492 2.492 6.493-6.493a1 1 0 011.415 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-slate-900 dark:text-white">Guardado exitoso</p>
+                  <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-300">
+                    Tu versión quedó registrada en el historial.
+                  </p>
+                  <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 truncate" title={saveSuccess.message}>
+                    “{saveSuccess.message}”
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSaveSuccess(null)}
+                  className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition"
+                  aria-label="Cerrar aviso"
+                >
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                    <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {saveOpen && (
           <div className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/20">

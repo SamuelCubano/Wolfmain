@@ -16,7 +16,7 @@ export default function RegisterForm() {
             W
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight">Crea tu cuenta</h1>
-          <p className="muted mt-1">Únete a Dev al instante y empieza a construir</p>
+          <p className="muted mt-1">Únete a Wolfmain y empieza a construir</p>
         </div>
 
         <div className="card p-6 sm:p-8">

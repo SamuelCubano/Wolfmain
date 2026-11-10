@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dev al instante",
+  title: "Wolfmain",
   description: "Playground de código web con editor, vista previa y proyectos.",
 };
 
@@ -61,7 +61,7 @@ export default function RootLayout({
                   W
                 </span>
                 <span className="bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300 bg-clip-text text-transparent">
-                  Dev al instante
+                  Wolfmain
                 </span>
               </Link>
               <AuthNavbar />

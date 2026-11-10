@@ -16,7 +16,7 @@ export default function LoginForm() {
             W
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight">Bienvenido de vuelta</h1>
-          <p className="muted mt-1">Inicia sesión para continuar en Dev al instante</p>
+          <p className="muted mt-1">Inicia sesión para continuar en Wolfmain</p>
         </div>
 
         <div className="card p-6 sm:p-8">
