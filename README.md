@@ -173,6 +173,18 @@ npm run lint && npm run build
 
 ---
 
+## Contribuir
+
+1. **Fork** el repositorio y **clone** tu copia.  
+2. Crea una rama descriptiva: `git checkout -b feature/nombre`.  
+3. Realiza los cambios, ejecuta `npm run lint && npm run build` y añade pruebas si son necesarias.  
+4. Commitea con mensaje claro siguiendo la convención `type(scope): description`.  
+5. Abre un **Pull Request** describiendo el propósito y cualquier decisión relevante.  
+
+¡Gracias por contribuir!
+
+---
+
 ## 📄 Licencia
 
 **MIT** — Úsalo, modifícalo, comercialízalo.  
