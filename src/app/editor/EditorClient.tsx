@@ -1,19 +1,21 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTheme } from "@/components/theme/ThemeProvider";
+import { useT } from "@/components/locale/translate";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
 export default function EditorClient() {
+  const t = useT();
   const searchParams = useSearchParams();
   const projectId = searchParams.get("project");
   const { resolved } = useTheme();
 
-  const [code, setCode] = useState("<h1>Hola mundo</h1>\n<p>Escribe tu HTML aquí.</p>");
+  const [code, setCode] = useState("<h1>Hello world</h1>\n<p>Write your HTML here.</p>");
   const [wrap, setWrap] = useState(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("dev-wrap") === "1";
@@ -46,16 +48,16 @@ export default function EditorClient() {
       <div className="border-b border-slate-200/60 dark:border-slate-800/60 bg-white/40 dark:bg-slate-950/30 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex justify-between items-center flex-wrap gap-2">
           <div className="flex items-center gap-3">
-            <h1 className="text-base sm:text-lg font-bold tracking-tight">Editor en vivo</h1>
+            <h1 className="text-base sm:text-lg font-bold tracking-tight">{t("editor.live")}</h1>
             {projectId && (
               <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">
-                Proyecto {projectId.slice(0, 8)}…
+                {t("editor.project")} {projectId.slice(0, 8)}…
               </span>
             )}
           </div>
           <div className="flex gap-2 items-center">
             <Link href="/dashboard" className="btn btn-ghost !py-1.5 text-sm">
-              Mis proyectos
+              {t("nav.myProjects")}
             </Link>
             <button onClick={() => setWrap(!wrap)} className="btn btn-ghost !py-1.5 text-sm">
               Wrap: {wrap ? "ON" : "OFF"}
@@ -73,7 +75,7 @@ export default function EditorClient() {
                 <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/90" />
                 <span className="w-2.5 h-2.5 rounded-full bg-green-400/90" />
               </span>
-              <span className="text-xs font-semibold muted uppercase tracking-wide">Editor</span>
+              <span className="text-xs font-semibold muted uppercase tracking-wide">{t("editor.editor")}</span>
             </div>
             <div className="h-[55vh] lg:h-[72vh]">
               <MonacoEditor
@@ -94,7 +96,7 @@ export default function EditorClient() {
                 <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/90" />
                 <span className="w-2.5 h-2.5 rounded-full bg-green-400/90" />
               </span>
-              <span className="text-xs font-semibold muted uppercase tracking-wide">Vista previa</span>
+              <span className="text-xs font-semibold muted uppercase tracking-wide">{t("editor.preview")}</span>
             </div>
             <div className="h-[55vh] lg:h-[72vh] p-2 bg-slate-50 dark:bg-slate-900/40">
               <iframe

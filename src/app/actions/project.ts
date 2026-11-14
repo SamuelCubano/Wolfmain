@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth";
+import { getServerLang, getServerT } from "@/lib/locale-server";
 import prisma from "@/prisma/client";
 
 function slugify(name: string): string {
@@ -17,10 +18,7 @@ function slugify(name: string): string {
 }
 
 const createProjectSchema = z.object({
-  name: z
-    .string()
-    .min(1, "El nombre es obligatorio")
-    .max(100, "El nombre es demasiado largo"),
+  name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
 });
 
@@ -34,6 +32,8 @@ export async function createProjectAction(
   formData: FormData
 ): Promise<ProjectActionState> {
   const user = await requireAuth();
+  const lang = await getServerLang();
+  const t = await getServerT();
 
   const raw = {
     name: formData.get("name") as string,
@@ -42,14 +42,21 @@ export async function createProjectAction(
 
   const parsed = createProjectSchema.safeParse(raw);
   if (!parsed.success) {
+    const errors: Record<string, string[]> = {};
+    for (const issue of parsed.error.issues) {
+      const key = issue.path.join(".") || "name";
+      const message =
+        issue.code === "too_small" ? t("server.nameRequired") : t("server.nameMax");
+      errors[key] = [...(errors[key] ?? []), message];
+    }
     return {
-      message: "Errores de validación",
-      errors: parsed.error.flatten().fieldErrors,
+      message: t("server.validation"),
+      errors,
     };
   }
 
   const { name, description } = parsed.data;
-  const baseSlug = slugify(name) || "proyecto";
+  const baseSlug = slugify(name) || (lang === "es" ? "proyecto" : "project");
   let slug = baseSlug;
   let counter = 1;
 
@@ -98,6 +105,7 @@ export async function listMyProjectsAction() {
 
 export async function deleteProjectAction(projectId: string) {
   const user = await requireAuth();
+  const t = await getServerT();
 
   const project = await prisma.project.findUnique({
     where: { id: projectId },
@@ -105,7 +113,7 @@ export async function deleteProjectAction(projectId: string) {
   });
 
   if (!project || project.owner_id !== user.id) {
-    throw new Error("Proyecto no encontrado o sin permisos");
+    throw new Error(t("server.projectNotFound"));
   }
 
   await prisma.project.delete({ where: { id: projectId } });

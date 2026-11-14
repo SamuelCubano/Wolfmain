@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useTheme } from "@/components/theme/ThemeProvider";
+import { useT, useLocaleTag } from "@/components/locale/translate";
+import type { Translate } from "@/lib/i18n";
 import {
   getProjectEditorDataAction,
   createProjectFileAction,
@@ -65,14 +67,14 @@ function languageFor(file: ProjectFile | null): string {
   return "plaintext";
 }
 
-function buildPreviewHtml(files: ProjectFile[], active: ProjectFile | null): string {
+function buildPreviewHtml(files: ProjectFile[], active: ProjectFile | null, t: Translate): string {
   const byPath = new Map(files.filter((f) => !f.is_folder).map((f) => [f.path, f]));
   const htmlFile =
     (active?.name.endsWith(".html") ? active : null) ??
     files.find((f) => !f.is_folder && f.name === "index.html") ??
     files.find((f) => !f.is_folder && f.name.endsWith(".html"));
   if (!htmlFile) {
-    return `<!doctype html><html><body style="font-family:system-ui;padding:24px;color:#334155"><h3>Sin archivo HTML</h3><p>Crea un <code>index.html</code> para ver la vista previa del proyecto.</p></body></html>`;
+    return `<!doctype html><html><body style="font-family:system-ui;padding:24px;color:#334155"><h3>${t("editor.emptyHtmlTitle")}</h3><p>${t("editor.emptyHtmlDesc")}</p></body></html>`;
   }
   let html = htmlFile.content || "";
   html = html.replace(/<link\s+[^>]*href=["']([^"']+)["'][^>]*>/gi, (m, href) => {
@@ -114,15 +116,15 @@ function showExternalOverlay(href){
     +'<div style="width:min(720px,100%);background:#0b0b0b;color:#fafafa;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.55);overflow:hidden">'
     +'<div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(255,255,255,.04),transparent)">'
     +'<span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:rgba(16,185,129,.18);color:#34d399;font-weight:700">✓</span>'
-    +'<span style="font-size:13px;font-weight:600;letter-spacing:.01em">Navegación externa detectada</span>'
+    +'<span style="font-size:13px;font-weight:600;letter-spacing:.01em">'+esc(t("editor.externalTitle"))+'</span>'
     +'</div>'
     +'<div style="padding:20px 18px 8px">'
-    +'<p style="margin:0 0 10px;font-size:18px;line-height:1.35;font-weight:600;color:#fff">Este botón te redirigiría a un sitio externo</p>'
-    +'<p style="margin:0 0 14px;font-size:14px;line-height:1.55;color:rgba(255,255,255,.72)">Por seguridad, el visor de la plataforma no abre páginas fuera del proyecto. El enlace apunta a:</p>'
+    +'<p style="margin:0 0 10px;font-size:18px;line-height:1.35;font-weight:600;color:#fff">'+esc(t("editor.externalDesc"))+'</p>'
+    +'<p style="margin:0 0 14px;font-size:14px;line-height:1.55;color:rgba(255,255,255,.72)">'+esc(t("editor.externalInfo"))+'</p>'
     +'<div style="margin:0 0 6px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:#a7f3d0;word-break:break-all">'+esc(dest)+'</div>'
     +'</div>'
     +'<div style="display:flex;gap:10px;justify-content:flex-end;padding:14px 18px 18px">'
-    +'<button id="__wolf_ext_back" style="appearance:none;border:1px solid rgba(255,255,255,.16);background:#fff;color:#111;padding:9px 14px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Volver atrás</button>'
+    +'<button id="__wolf_ext_back" style="appearance:none;border:1px solid rgba(255,255,255,.16);background:#fff;color:#111;padding:9px 14px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">'+esc(t("editor.externalBack"))+'</button>'
     +'</div></div></div>';
   document.body.appendChild(wrap);
   var back=document.getElementById('__wolf_ext_back');
@@ -148,6 +150,8 @@ document.addEventListener('click',function(e){
 
 export default function EditorClient({ projectId }: { projectId: string | null }) {
   const { resolved } = useTheme();
+  const t = useT();
+  const locale = useLocaleTag();
   const isDark = resolved === "dark";
   const [projectName, setProjectName] = useState<string | null>(null);
   const [files, setFiles] = useState<ProjectFile[]>([]);
@@ -228,13 +232,13 @@ export default function EditorClient({ projectId }: { projectId: string | null }
         const hist = await getProjectHistoryAction(projectId);
         if (!cancelled && hist.entries) setHistory(hist.entries);
       } catch (e: unknown) {
-        if (!cancelled) setNotice(e instanceof Error ? e.message : "Error cargando proyecto", "err");
+        if (!cancelled) setNotice(e instanceof Error ? e.message : t("editor.loadingProject"), "err");
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [projectId, startProjectLoad, refreshHistory, setNotice]);
+  }, [projectId, startProjectLoad, refreshHistory, setNotice, t]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -273,13 +277,13 @@ export default function EditorClient({ projectId }: { projectId: string | null }
 
   useEffect(() => {
     if (iframeRef.current) {
-      if (projectId) iframeRef.current.srcdoc = buildPreviewHtml(files, activeFile);
+      if (projectId) iframeRef.current.srcdoc = buildPreviewHtml(files, activeFile, t);
       else {
-        const solo = files[0]?.content ?? activeFile?.content ?? "<h1>Hola mundo</h1>\n<p>Escribe tu HTML aquí.</p>";
+        const solo = files[0]?.content ?? activeFile?.content ?? t("editor.sampleHtml");
         iframeRef.current.srcdoc = solo;
       }
     }
-  }, [files, activeFile, projectId]);
+  }, [files, activeFile, projectId, t]);
 
   const onChangeCode = useCallback(
     (value: string) => {
@@ -294,13 +298,13 @@ export default function EditorClient({ projectId }: { projectId: string | null }
     if (!projectId || !activeFile) return;
     const message = commitMessage.trim();
     if (!message) {
-      setNotice("Escribe un mensaje para el historial de cambios.", "err");
+      setNotice(t("editor.writeMessage"), "err");
       return;
     }
     const content = activeFile.content ?? "";
     const fileId = activeFile.id;
     startTransition(async () => {
-      setNotice("Guardando cambios...", "muted");
+      setNotice(`${t("editor.saving")}`, "muted");
       const res = await saveProjectFileAction({
         projectId,
         fileId,
@@ -319,7 +323,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
       });
       setSaveOpen(false);
       setCommitMessage("");
-      setNotice("Guardado exitoso", "ok");
+      setNotice(t("editor.savedOk"), "ok");
       const at = Date.now();
       setSaveSuccess({ message, at });
       if (saveSuccessTimer.current) clearTimeout(saveSuccessTimer.current);
@@ -328,7 +332,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
       }, 4200);
       void refreshHistory(projectId);
     });
-  }, [projectId, activeFile, commitMessage, refreshHistory, setNotice]);
+  }, [projectId, activeFile, commitMessage, refreshHistory, setNotice, t]);
 
   async function handleCreate() {
     if (!projectId || !creating) return;
@@ -356,7 +360,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
 
   async function handleDelete(file: ProjectFile) {
     if (!projectId) return;
-    if (!confirm(`¿Eliminar ${file.is_folder ? "la carpeta" : "el archivo"} "${file.name}"?`)) return;
+    if (!confirm(t("editor.confirmDelete", { type: file.is_folder ? t("editor.folder") : t("editor.file"), name: file.name }))) return;
     startTransition(async () => {
       const res = await deleteProjectFileAction({ projectId, fileId: file.id });
       if (res.error) setNotice(res.error, "err");
@@ -442,7 +446,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
             <span className="flex lg:hidden lg:group-hover:flex items-center gap-0.5">
               {node.is_folder && (
                 <button
-                  title="Nuevo archivo"
+                  title={t("editor.newFileTitle")}
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenFolders((s) => new Set(s).add(node.id));
@@ -455,7 +459,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                 </button>
               )}
               <button
-                title="Renombrar"
+                title={t("editor.rename")}
                 onClick={(e) => {
                   e.stopPropagation();
                   setRenamingId(node.id);
@@ -466,7 +470,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                 ✎
               </button>
               <button
-                title="Eliminar"
+                title={t("editor.deleteTitle")}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleDelete(node);
@@ -489,7 +493,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                 if (e.key === "Enter") handleCreate();
                 if (e.key === "Escape") setCreating(null);
               }}
-              placeholder={creating.folder ? "nombre-carpeta" : "archivo.html"}
+              placeholder={creating.folder ? t("editor.folderNamePlaceholder") : t("editor.fileNamePlaceholder")}
               className="w-full rounded-lg bg-white dark:bg-slate-900 border border-emerald-500/40 px-2 py-1.5 text-xs outline-none"
             />
           </div>
@@ -511,31 +515,31 @@ export default function EditorClient({ projectId }: { projectId: string | null }
               <button
                 onClick={() => setExplorerOpen((v) => !v)}
                 className="btn btn-ghost !py-1.5 !px-2.5 text-sm lg:hidden"
-                aria-label="Explorador"
+                aria-label={t("editor.explorer")}
               >
                 ☰
               </button>
             )}
             <h1 className="text-sm sm:text-base font-bold tracking-tight truncate">
-              {projectName ? projectName : "Editor rápido"}
+              {projectName ? projectName : t("editor.quick")}
             </h1>
             {projectId ? (
               <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
-                Proyecto
+                {t("editor.project")}
               </span>
             ) : (
-              <span className="text-[11px] muted">Sin guardar en la nube</span>
+              <span className="text-[11px] muted">{t("editor.notSavedToCloud")}</span>
             )}
-            {canSave && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">Cambios sin guardar</span>}
+            {canSave && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">{t("editor.unsavedChanges")}</span>}
             {status && <span className={`text-[11px] ${statusClass}`}>{status}</span>}
           </div>
 
           <div className="flex flex-wrap gap-2 items-center">
             <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 p-0.5 bg-slate-50 dark:bg-slate-900">
               {([
-                ["code", "Código"],
-                ["split", "Split"],
-                ["preview", "Vista"],
+                ["code", t("editor.view.code")],
+                ["split", t("editor.view.split")],
+                ["preview", t("editor.view.preview")],
               ] as const).map(([id, label]) => (
                 <button
                   key={id}
@@ -561,19 +565,19 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                   }}
                   className="btn btn-ghost !py-1.5 text-xs sm:text-sm"
                 >
-                  Historial
+                  {t("editor.history")}
                 </button>
                 <button
                   onClick={() => setSaveOpen(true)}
                   disabled={!activeFile || isPending}
                   className="btn btn-primary !py-1.5 text-xs sm:text-sm"
                 >
-                  Guardar cambios
+                  {t("editor.saveChanges")}
                 </button>
               </>
             )}
             <Link href="/dashboard" className="btn btn-ghost !py-1.5 text-xs sm:text-sm">
-              Salir al dashboard
+              {t("editor.exitToDashboard")}
             </Link>
           </div>
         </div>
@@ -596,36 +600,36 @@ export default function EditorClient({ projectId }: { projectId: string | null }
               className={`${explorerOpen ? "flex" : "hidden lg:flex"} card overflow-hidden flex-col min-h-0 absolute inset-x-2 top-2 bottom-2 z-20 lg:static lg:z-auto`}
             >
               <div className="px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
-                <span className="text-[11px] font-bold muted uppercase tracking-wider">Explorador</span>
+                <span className="text-[11px] font-bold muted uppercase tracking-wider">{t("editor.explorer")}</span>
                 <div className="flex gap-1">
                   <button
-                    title="Nuevo archivo"
+                    title={t("editor.newFileTitle")}
                     onClick={() => {
                       setCreating({ parentId: null, folder: false });
                       setNewName("");
                     }}
                     className="text-xs px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
-                    + Archivo
+                    {t("editor.newFileShort")}
                   </button>
                   <button
-                    title="Nueva carpeta"
+                    title={t("editor.newFolder")}
                     onClick={() => {
                       setCreating({ parentId: null, folder: true });
                       setNewName("");
                     }}
                     className="text-xs px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
-                    + Carpeta
+                    {t("editor.newFolderShort")}
                   </button>
                   <button onClick={() => setExplorerOpen(false)} className="lg:hidden text-xs px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
-                    Cerrar
+                    {t("editor.close")}
                   </button>
                 </div>
               </div>
               <div className="flex-1 overflow-auto p-2">
                 {loadingProject ? (
-                  <p className="text-sm muted px-2 py-3">Cargando archivos...</p>
+                  <p className="text-sm muted px-2 py-3">{t("editor.loadingFiles")}</p>
                 ) : (
                   <>
                     {tree.map((n) => renderNode(n, 0))}
@@ -639,13 +643,13 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                             if (e.key === "Enter") handleCreate();
                             if (e.key === "Escape") setCreating(null);
                           }}
-                          placeholder={creating.folder ? "nombre-carpeta" : "archivo.html"}
+                          placeholder={creating.folder ? t("editor.folderNamePlaceholder") : t("editor.fileNamePlaceholder")}
                           className="w-full rounded-lg bg-white dark:bg-slate-900 border border-emerald-500/40 px-2 py-1.5 text-xs outline-none"
                         />
                       </div>
                     )}
                     {!loadingProject && files.length === 0 && !creating && (
-                      <p className="text-sm muted px-2 py-3">Sin archivos. Crea uno para empezar.</p>
+                      <p className="text-sm muted px-2 py-3">{t("editor.noFiles")}</p>
                     )}
                   </>
                 )}
@@ -657,17 +661,17 @@ export default function EditorClient({ projectId }: { projectId: string | null }
             <section className="card overflow-hidden flex flex-col min-h-0">
               <div className="px-3 sm:px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 min-w-0">
                 <span className="text-xs font-semibold muted uppercase tracking-wide truncate">
-                  {activeFile ? activeFile.path : "Editor"}
+                  {activeFile ? activeFile.path : t("editor.editor")}
                 </span>
-                {dirtyIds.has(activeFile?.id || "") && <span className="text-[10px] text-amber-600 dark:text-amber-400">sin guardar</span>}
+                {dirtyIds.has(activeFile?.id || "") && <span className="text-[10px] text-amber-600 dark:text-amber-400">{t("editor.unsaved")}</span>}
                 {isPending && <span className="text-[10px] muted">…</span>}
               </div>
               <div className="flex-1 min-h-0">
                 {projectId && !activeFile && !loadingProject ? (
                   <div className="h-full flex items-center justify-center p-6 text-center">
                     <div>
-                      <p className="font-semibold mb-1">Selecciona un archivo</p>
-                      <p className="text-sm muted">Elige un archivo del explorador o crea uno nuevo.</p>
+                      <p className="font-semibold mb-1">{t("editor.selectFile")}</p>
+                      <p className="text-sm muted">{t("editor.selectFileDesc")}</p>
                     </div>
                   </div>
                 ) : (
@@ -675,7 +679,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                     height="100%"
                     language={projectId ? languageFor(activeFile) : "html"}
                     theme={isDark ? "vs-dark" : "light"}
-                    value={activeFile?.content ?? (projectId ? "" : "<h1>Hola mundo</h1>\n<p>Escribe tu HTML aquí.</p>")}
+                    value={activeFile?.content ?? (projectId ? "" : t("editor.sampleHtml"))}
                     onChange={(v) => {
                       if (projectId) onChangeCode(v || "");
                       else
@@ -702,7 +706,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                       readOnly: !!projectId && !activeFile,
                       scrollBeyondLastLine: false,
                     }}
-                    loading={<div className="p-4 text-sm muted">Cargando editor…</div>}
+                    loading={<div className="p-4 text-sm muted">{t("editor.loadingEditor")}</div>}
                   />
                 )}
               </div>
@@ -712,12 +716,12 @@ export default function EditorClient({ projectId }: { projectId: string | null }
           {(view === "preview" || view === "split") && (
             <section className="card overflow-hidden flex flex-col min-h-0">
               <div className="px-3 sm:px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
-                <span className="text-xs font-semibold muted uppercase tracking-wide">Vista previa</span>
+                <span className="text-xs font-semibold muted uppercase tracking-wide">{t("editor.preview")}</span>
               </div>
               <div className="flex-1 min-h-0 p-2 bg-slate-100 dark:bg-slate-900">
                 <iframe
                   ref={iframeRef}
-                  title="Vista previa"
+                  title={t("editor.preview")}
                   className="w-full h-full border border-slate-200 dark:border-slate-800 rounded-xl bg-white"
                   sandbox="allow-scripts"
                 />
@@ -745,9 +749,9 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                   </svg>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-slate-900 dark:text-white">Guardado exitoso</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">{t("editor.saveSuccess")}</p>
                   <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-300">
-                    Tu versión quedó registrada en el historial.
+                    {t("editor.saveSuccessDesc")}
                   </p>
                   <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 truncate" title={saveSuccess.message}>
                     “{saveSuccess.message}”
@@ -757,7 +761,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                   type="button"
                   onClick={() => setSaveSuccess(null)}
                   className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition"
-                  aria-label="Cerrar aviso"
+                  aria-label={t("editor.dismiss")}
                 >
                   <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                     <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
@@ -771,17 +775,17 @@ export default function EditorClient({ projectId }: { projectId: string | null }
         {saveOpen && (
           <div className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/20">
             <div className="w-full max-w-lg card p-5 sm:p-6 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950">
-              <h2 className="text-lg font-bold">Guardar en historial</h2>
+              <h2 className="text-lg font-bold">{t("editor.saveToHistory")}</h2>
               <p className="text-sm muted mt-1">
-                Describe qué cambiaste. Este mensaje es obligatorio y quedará en la evolución del proyecto.
+                {t("editor.saveToHistoryDesc")}
               </p>
               <div className="mt-4">
-                <label className="text-sm font-semibold">Mensaje del cambio</label>
+                <label className="text-sm font-semibold">{t("editor.changeMessage")}</label>
                 <textarea
                   value={commitMessage}
                   onChange={(e) => setCommitMessage(e.target.value)}
                   rows={4}
-                  placeholder="Ej: Agregué la sección de contacto y ajusté estilos móviles"
+                  placeholder={t("editor.changeMessagePlaceholder")}
                   className="input mt-1.5 resize-y"
                   autoFocus
                 />
@@ -789,10 +793,10 @@ export default function EditorClient({ projectId }: { projectId: string | null }
               {statusTone === "err" && status && <p className="text-sm text-red-600 dark:text-red-400 mt-2">{status}</p>}
               <div className="mt-5 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                 <button onClick={() => setSaveOpen(false)} className="btn btn-ghost">
-                  Cancelar
+                  {t("dashboard.cancel")}
                 </button>
                 <button onClick={commitSave} disabled={isPending || !commitMessage.trim()} className="btn btn-primary">
-                  {isPending ? "Guardando..." : "Guardar versión"}
+                  {isPending ? t("editor.saving") : t("editor.saveVersion")}
                 </button>
               </div>
             </div>
@@ -804,23 +808,23 @@ export default function EditorClient({ projectId }: { projectId: string | null }
             <div className="card h-full flex flex-col overflow-hidden bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800">
               <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
                 <div>
-                  <h2 className="font-bold">Historial de cambios</h2>
-                  <p className="text-xs muted">Evolución del proyecto (últimas 50 versiones)</p>
+                  <h2 className="font-bold">{t("editor.changeHistory")}</h2>
+                  <p className="text-xs muted">{t("editor.historySubtitle")}</p>
                 </div>
                 <button onClick={() => setHistoryOpen(false)} className="btn btn-ghost !py-1.5 !px-2.5 text-sm">
-                  Cerrar
+                  {t("editor.close")}
                 </button>
               </div>
               <div className="flex-1 overflow-auto p-3 space-y-2">
                 {historyLoading ? (
-                  <p className="text-sm muted p-2">Cargando historial...</p>
+                  <p className="text-sm muted p-2">{t("editor.loadingHistory")}</p>
                 ) : history.length === 0 ? (
-                  <p className="text-sm muted p-2">Aún no hay versiones guardadas. Usa “Guardar cambios” y escribe un mensaje.</p>
+                  <p className="text-sm muted p-2">{t("editor.noHistory")}</p>
                 ) : (
                   history.map((h) => (
                     <article key={h.id} className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 bg-slate-50/70 dark:bg-slate-900/50">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-semibold leading-snug">{h.commit_message || "Sin mensaje"}</p>
+                        <p className="text-sm font-semibold leading-snug">{h.commit_message || t("editor.noMessage")}</p>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0">
                           v{h.version_number}
                         </span>
@@ -829,7 +833,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                         {h.file_path}
                       </p>
                       <p className="text-[11px] muted mt-1">
-                        {new Date(h.created_at).toLocaleString("es-ES", {
+                        {new Date(h.created_at).toLocaleString(locale, {
                           dateStyle: "medium",
                           timeStyle: "short",
                         })}

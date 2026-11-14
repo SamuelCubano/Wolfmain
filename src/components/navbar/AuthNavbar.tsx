@@ -1,11 +1,13 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getSessionAction, logoutAction } from "@/app/actions/auth";
 import type { SessionUser } from "@/lib/auth";
+import { useT } from "@/components/locale/translate";
 
 export default function AuthNavbar() {
+  const t = useT();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -41,10 +43,10 @@ export default function AuthNavbar() {
     return (
       <div className="flex items-center gap-2 flex-wrap">
         <Link href="/login" className="btn btn-ghost">
-          Iniciar sesión
+          {t("nav.login")}
         </Link>
         <Link href="/register" className="btn btn-primary">
-          Regístrate
+          {t("nav.register")}
         </Link>
       </div>
     );
@@ -89,21 +91,21 @@ export default function AuthNavbar() {
               onClick={() => setOpen(false)}
               className="flex items-center gap-2 px-3 py-2 text-sm rounded-xl text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-700 dark:hover:text-emerald-300 transition"
             >
-              <span>📁</span> Mis proyectos
+              <span>📁</span> {t("nav.myProjects")}
             </Link>
             <Link
               href="/editor"
               onClick={() => setOpen(false)}
               className="flex items-center gap-2 px-3 py-2 text-sm rounded-xl text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-700 dark:hover:text-emerald-300 transition"
             >
-              <span>⚡</span> Editor rápido
+              <span>⚡</span> {t("nav.quickEditor")}
             </Link>
             <Link
               href="/settings"
               onClick={() => setOpen(false)}
               className="flex items-center gap-2 px-3 py-2 text-sm rounded-xl text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-700 dark:hover:text-emerald-300 transition"
             >
-              <span>⚙️</span> Configuración
+              <span>⚙️</span> {t("nav.settings")}
             </Link>
           </div>
           <div className="border-t border-slate-200 dark:border-slate-700 p-1.5">
@@ -112,7 +114,7 @@ export default function AuthNavbar() {
                 type="submit"
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition"
               >
-                <span>↩</span> Cerrar sesión
+                <span>↩</span> {t("nav.logout")}
               </button>
             </form>
           </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createProjectAction, deleteProjectAction } from "@/app/actions/project";
 import type { ProjectActionState } from "@/app/actions/project";
 import type { SessionUser } from "@/lib/auth";
+import { useT, useLocaleTag } from "@/components/locale/translate";
 
 type Project = {
   id: string;
@@ -24,6 +25,8 @@ export default function DashboardClient({
   user: SessionUser;
   initialProjects: Project[];
 }) {
+  const t = useT();
+  const locale = useLocaleTag();
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [showCreate, setShowCreate] = useState(initialProjects.length === 0);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -37,13 +40,13 @@ export default function DashboardClient({
   );
 
   async function handleDelete(id: string) {
-    if (!confirm("¿Eliminar este proyecto? Esta acción no se puede deshacer.")) return;
+    if (!confirm(t("dashboard.deleteConfirm"))) return;
     setDeletingId(id);
     try {
       await deleteProjectAction(id);
       setProjects((prev) => prev.filter((p) => p.id !== id));
     } catch {
-      alert("Error al eliminar el proyecto");
+      alert(t("dashboard.deleteError"));
     } finally {
       setDeletingId(null);
     }
@@ -71,28 +74,30 @@ export default function DashboardClient({
         <section className="card p-5 sm:p-7 mb-6 relative">
           <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
             <div>
-              <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-1">Dashboard</p>
+              <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-1">{t("dashboard.badge")}</p>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                Hola, {user.username}
+                {t("dashboard.hello", { name: user.username })}
               </h1>
-              <p className="muted mt-1 max-w-2xl">
-                Este es tu espacio de trabajo. Crea proyectos, ábrelos en el editor y configura tu cuenta.
-              </p>
+              <p className="muted mt-1 max-w-2xl">{t("dashboard.subtitle")}</p>
               <div className="flex flex-wrap gap-2 mt-4">
                 <span className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 dark:border-slate-700/60 bg-white/60 dark:bg-slate-900/40 px-3 py-1 text-xs font-semibold">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  {stats.total} proyecto{stats.total === 1 ? "" : "s"}
+                  {stats.total === 1
+                    ? t("dashboard.projectOne", { count: stats.total })
+                    : t("dashboard.projectMany", { count: stats.total })}
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 dark:border-slate-700/60 bg-white/60 dark:bg-slate-900/40 px-3 py-1 text-xs font-semibold">
-                  {stats.files} archivo{stats.files === 1 ? "" : "s"} registrados
+                  {stats.files === 1
+                    ? t("dashboard.fileOne", { count: stats.files })
+                    : t("dashboard.fileMany", { count: stats.files })}
                 </span>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href="/editor" className="btn btn-ghost">Editor rápido</Link>
-              <Link href="/settings" className="btn btn-ghost">Configuración</Link>
+              <Link href="/editor" className="btn btn-ghost">{t("dashboard.quickEditor")}</Link>
+              <Link href="/settings" className="btn btn-ghost">{t("dashboard.settings")}</Link>
               <button onClick={() => setShowCreate((v) => !v)} className="btn btn-primary">
-                {showCreate ? "Cerrar" : "+ Nuevo proyecto"}
+                {showCreate ? t("dashboard.close") : t("dashboard.newProject")}
               </button>
             </div>
           </div>
@@ -102,8 +107,8 @@ export default function DashboardClient({
           <section className="card p-6 mb-6">
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
-                <h2 className="text-lg font-semibold">Crear nuevo proyecto</h2>
-                <p className="text-sm muted">Se creará en tu cuenta y te llevará al editor.</p>
+                <h2 className="text-lg font-semibold">{t("dashboard.createTitle")}</h2>
+                <p className="text-sm muted">{t("dashboard.createSubtitle")}</p>
               </div>
             </div>
             {createState?.message && (
@@ -113,22 +118,22 @@ export default function DashboardClient({
             )}
             <form action={createFormAction} className="grid gap-4 max-w-2xl">
               <div>
-                <label className="label">Nombre del proyecto</label>
-                <input name="name" type="text" placeholder="Mi proyecto increíble" className="input" required />
+                <label className="label">{t("dashboard.projectName")}</label>
+                <input name="name" type="text" placeholder={t("dashboard.projectNamePlaceholder")} className="input" required />
                 {createState?.errors?.name && (
                   <p className="mt-1 text-sm text-red-600 dark:text-red-400">{createState.errors.name[0]}</p>
                 )}
               </div>
               <div>
-                <label className="label">Descripción (opcional)</label>
-                <textarea name="description" rows={2} placeholder="Describe tu proyecto..." className="input resize-y" />
+                <label className="label">{t("dashboard.description")}</label>
+                <textarea name="description" rows={2} placeholder={t("dashboard.descriptionPlaceholder")} className="input resize-y" />
               </div>
               <div className="flex gap-2">
                 <button type="submit" disabled={isCreating} className="btn btn-primary">
-                  {isCreating ? "Creando..." : "Crear y abrir editor"}
+                  {isCreating ? t("dashboard.creating") : t("dashboard.createAndOpen")}
                 </button>
                 <button type="button" onClick={() => setShowCreate(false)} className="btn btn-ghost">
-                  Cancelar
+                  {t("dashboard.cancel")}
                 </button>
               </div>
             </form>
@@ -140,9 +145,9 @@ export default function DashboardClient({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar proyectos por nombre o descripción..."
+              placeholder={t("dashboard.searchPlaceholder")}
               className="input max-w-xl"
-              aria-label="Buscar proyectos"
+              aria-label={t("dashboard.searchAria")}
             />
           </div>
         )}
@@ -150,17 +155,15 @@ export default function DashboardClient({
         {projects.length === 0 ? (
           <section className="card p-10 sm:p-14 text-center">
             <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 text-2xl flex items-center justify-center mx-auto mb-4">📁</div>
-            <h3 className="text-lg font-semibold mb-2">Bienvenido a tu dashboard</h3>
-            <p className="muted mb-6 max-w-md mx-auto">
-              Aún no tienes proyectos. Crea el primero y lo abriremos en el editor.
-            </p>
+            <h3 className="text-lg font-semibold mb-2">{t("dashboard.emptyTitle")}</h3>
+            <p className="muted mb-6 max-w-md mx-auto">{t("dashboard.emptyDesc")}</p>
             <button onClick={() => setShowCreate(true)} className="btn btn-primary">
-              Crear primer proyecto
+              {t("dashboard.createFirst")}
             </button>
           </section>
         ) : filtered.length === 0 ? (
           <section className="card p-8 text-center">
-            <p className="muted">No hay proyectos que coincidan con tu búsqueda.</p>
+            <p className="muted">{t("dashboard.noMatches")}</p>
           </section>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -176,23 +179,26 @@ export default function DashboardClient({
                   </span>
                 </div>
                 <p className="text-sm muted mb-4 line-clamp-2 min-h-[2.5rem]">
-                  {project.description || "Sin descripción"}
+                  {project.description || t("dashboard.noDescription")}
                 </p>
                 <p className="text-xs muted mb-4 mt-auto">
-                  {project._count.files} archivo{project._count.files === 1 ? "" : "s"} · Actualizado{" "}
-                  {new Date(project.updated_at).toLocaleDateString("es-ES")}
+                  {project._count.files === 1
+                    ? t("dashboard.fileOne", { count: project._count.files })
+                    : t("dashboard.fileMany", { count: project._count.files })}{" "}
+                  · {t("dashboard.updated")}{" "}
+                  {new Date(project.updated_at).toLocaleDateString(locale)}
                 </p>
                 <div className="flex gap-2">
                   <Link href={`/editor?project=${project.id}`} className="btn btn-primary flex-1 !py-2">
-                    Abrir editor
+                    {t("dashboard.openEditor")}
                   </Link>
                   <button
                     onClick={() => handleDelete(project.id)}
                     disabled={deletingId === project.id}
                     className="btn btn-danger !py-2"
-                    title="Eliminar proyecto"
+                    title={t("dashboard.deleteTitle")}
                   >
-                    {deletingId === project.id ? "…" : "Eliminar"}
+                    {deletingId === project.id ? "…" : t("dashboard.delete")}
                   </button>
                 </div>
               </article>

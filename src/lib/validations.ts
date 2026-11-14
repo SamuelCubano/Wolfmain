@@ -1,31 +1,35 @@
 import { z } from "zod";
+import { getTranslator, type Lang } from "@/lib/i18n";
 
-export const registerSchema = z
-  .object({
-    username: z
-      .string()
-      .min(3, "El usuario debe tener al menos 3 caracteres")
-      .max(30, "El usuario no puede exceder 30 caracteres")
-      .regex(
-        /^[a-zA-Z0-9_]+$/,
-        "El usuario solo puede contener letras, números y guiones bajos"
-      ),
-    email: z.string().email("Correo electrónico inválido"),
-    password: z
-      .string()
-      .min(8, "La contraseña debe tener al menos 8 caracteres")
-      .max(128, "La contraseña es demasiado larga"),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Las contraseñas no coinciden",
-    path: ["confirmPassword"],
+export function registerSchema(lang: Lang = "en") {
+  const t = getTranslator(lang);
+  return z
+    .object({
+      username: z
+        .string()
+        .min(3, t("server.usernameMin"))
+        .max(30, t("server.usernameMax"))
+        .regex(/^[a-zA-Z0-9_]+$/, t("server.usernameInvalid")),
+      email: z.string().email(t("server.emailInvalid")),
+      password: z
+        .string()
+        .min(8, t("server.passwordMin"))
+        .max(128, t("server.passwordMax")),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: t("server.passwordsMismatch"),
+      path: ["confirmPassword"],
+    });
+}
+
+export function loginSchema(lang: Lang = "en") {
+  const t = getTranslator(lang);
+  return z.object({
+    email: z.string().email(t("server.emailInvalid")),
+    password: z.string().min(1, t("server.passwordRequired")),
   });
+}
 
-export const loginSchema = z.object({
-  email: z.string().email("Correo electrónico inválido"),
-  password: z.string().min(1, "La contraseña es obligatoria"),
-});
-
-export type RegisterInput = z.infer<typeof registerSchema>;
-export type LoginInput = z.infer<typeof loginSchema>;
+export type RegisterInput = z.infer<ReturnType<typeof registerSchema>>;
+export type LoginInput = z.infer<ReturnType<typeof loginSchema>>;

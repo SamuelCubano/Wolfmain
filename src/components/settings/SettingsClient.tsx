@@ -4,6 +4,8 @@ import { useActionState } from "react";
 import { updateProfileAction, changePasswordAction } from "@/app/actions/profile";
 import type { ProfileActionState } from "@/app/actions/profile";
 import { useTheme, type ThemeMode } from "@/components/theme/ThemeProvider";
+import { useT, useLocaleTag } from "@/components/locale/translate";
+import LanguageSwitcher from "@/components/navbar/LanguageSwitcher";
 
 type Profile = {
   id: string;
@@ -53,10 +55,11 @@ function Notice({ state }: { state: ProfileActionState | null }) {
 
 function ThemePicker() {
   const { mode, setMode } = useTheme();
+  const t = useT();
   const options: { value: ThemeMode; label: string; desc: string; icon: string }[] = [
-    { value: "light", label: "Claro", desc: "Fondo claro, ideal de día", icon: "☀️" },
-    { value: "dark", label: "Oscuro", desc: "Reduce el brillo, ideal de noche", icon: "🌙" },
-    { value: "system", label: "Sistema", desc: "Sigue la preferencia de tu dispositivo", icon: "💻" },
+    { value: "light", label: t("settings.theme.light"), desc: t("settings.theme.lightDesc"), icon: "☀️" },
+    { value: "dark", label: t("settings.theme.dark"), desc: t("settings.theme.darkDesc"), icon: "🌙" },
+    { value: "system", label: t("settings.theme.system"), desc: t("settings.theme.systemDesc"), icon: "💻" },
   ];
 
   return (
@@ -78,7 +81,7 @@ function ThemePicker() {
               <span className="text-xl">{opt.icon}</span>
               {active && (
                 <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full">
-                  Activo
+                  {t("settings.theme.active")}
                 </span>
               )}
             </div>
@@ -91,7 +94,23 @@ function ThemePicker() {
   );
 }
 
+function LanguagePicker() {
+  const t = useT();
+
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-slate-200/70 dark:border-slate-700/60 p-4">
+      <div>
+        <p className="font-semibold text-sm">{t("settings.language")}</p>
+        <p className="text-xs muted mt-0.5">{t("settings.languageDesc")}</p>
+      </div>
+      <LanguageSwitcher />
+    </div>
+  );
+}
+
 export default function SettingsClient({ initialProfile }: { initialProfile: Profile }) {
+  const t = useT();
+  const locale = useLocaleTag();
   const [profileState, profileAction, isSavingProfile] = useActionState(
     updateProfileAction,
     null as ProfileActionState | null
@@ -109,13 +128,13 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Pro
     <main className="flex-1 app-bg">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
         <div className="mb-8">
-          <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-1">Cuenta</p>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Centro de configuración</h1>
-          <p className="muted mt-2">Personaliza tu perfil, apariencia y seguridad.</p>
+          <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-1">{t("settings.account")}</p>
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">{t("settings.title")}</h1>
+          <p className="muted mt-2">{t("settings.subtitle")}</p>
         </div>
 
         <div className="grid gap-6">
-          <Section title="Perfil público" description="Cómo te ven otros en la plataforma.">
+          <Section title={t("settings.publicProfile")} description={t("settings.publicProfileDesc")}>
             <div className="flex items-center gap-4 mb-6 p-4 rounded-xl bg-slate-100/60 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-700/40">
               <span className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-xl font-bold shadow-lg shadow-emerald-500/20">
                 {initial}
@@ -130,12 +149,12 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Pro
 
             <form action={profileAction} className="space-y-4 max-w-xl">
               <div>
-                <label className="label">Nombre para mostrar</label>
+                <label className="label">{t("settings.displayName")}</label>
                 <input
                   name="display_name"
                   type="text"
                   defaultValue={initialProfile.display_name || ""}
-                  placeholder="Tu nombre público"
+                  placeholder={t("settings.displayNamePlaceholder")}
                   className="input"
                 />
                 {profileState?.errors?.display_name && (
@@ -145,12 +164,12 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Pro
                 )}
               </div>
               <div>
-                <label className="label">Bio</label>
+                <label className="label">{t("settings.bio")}</label>
                 <textarea
                   name="bio"
                   rows={3}
                   defaultValue={initialProfile.bio || ""}
-                  placeholder="Cuéntanos sobre ti..."
+                  placeholder={t("settings.bioPlaceholder")}
                   className="input resize-y"
                 />
                 {profileState?.errors?.bio && (
@@ -160,20 +179,24 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Pro
                 )}
               </div>
               <button type="submit" disabled={isSavingProfile} className="btn btn-primary">
-                {isSavingProfile ? "Guardando..." : "Guardar perfil"}
+                {isSavingProfile ? t("settings.savingProfile") : t("settings.saveProfile")}
               </button>
             </form>
           </Section>
 
-          <Section title="Apariencia" description="Elige cómo se ve la interfaz. El cambio se aplica al instante.">
+          <Section title={t("settings.appearance")} description={t("settings.appearanceDesc")}>
             <ThemePicker />
           </Section>
 
-          <Section title="Seguridad" description="Actualiza tu contraseña regularmente para proteger tu cuenta.">
+          <Section title={t("settings.language")} description={t("settings.languageDesc")}>
+            <LanguagePicker />
+          </Section>
+
+          <Section title={t("settings.security")} description={t("settings.securityDesc")}>
             <Notice state={passwordState} />
             <form action={passwordAction} className="space-y-4 max-w-xl">
               <div>
-                <label className="label">Contraseña actual</label>
+                <label className="label">{t("settings.currentPassword")}</label>
                 <input name="currentPassword" type="password" className="input" autoComplete="current-password" />
                 {passwordState?.errors?.currentPassword && (
                   <p className="mt-1 text-sm text-red-600 dark:text-red-400">
@@ -183,7 +206,7 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Pro
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="label">Nueva contraseña</label>
+                  <label className="label">{t("settings.newPassword")}</label>
                   <input name="newPassword" type="password" className="input" autoComplete="new-password" />
                   {passwordState?.errors?.newPassword && (
                     <p className="mt-1 text-sm text-red-600 dark:text-red-400">
@@ -192,7 +215,7 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Pro
                   )}
                 </div>
                 <div>
-                  <label className="label">Confirmar nueva contraseña</label>
+                  <label className="label">{t("settings.confirmNewPassword")}</label>
                   <input name="confirmNewPassword" type="password" className="input" autoComplete="new-password" />
                   {passwordState?.errors?.confirmNewPassword && (
                     <p className="mt-1 text-sm text-red-600 dark:text-red-400">
@@ -202,25 +225,25 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Pro
                 </div>
               </div>
               <button type="submit" disabled={isSavingPassword} className="btn btn-primary">
-                {isSavingPassword ? "Actualizando..." : "Cambiar contraseña"}
+                {isSavingPassword ? t("settings.updating") : t("settings.changePassword")}
               </button>
             </form>
           </Section>
 
-          <Section title="Información de cuenta">
+          <Section title={t("settings.accountInfo")} description={t("settings.accountInfoDesc")}>
             <dl className="grid sm:grid-cols-2 gap-4 text-sm">
               <div className="rounded-xl border border-slate-200/60 dark:border-slate-700/50 p-4">
-                <dt className="muted mb-1">Usuario</dt>
+                <dt className="muted mb-1">{t("settings.user")}</dt>
                 <dd className="font-semibold">@{initialProfile.username}</dd>
               </div>
               <div className="rounded-xl border border-slate-200/60 dark:border-slate-700/50 p-4">
-                <dt className="muted mb-1">Correo electrónico</dt>
+                <dt className="muted mb-1">{t("settings.email")}</dt>
                 <dd className="font-semibold break-all">{initialProfile.email}</dd>
               </div>
               <div className="rounded-xl border border-slate-200/60 dark:border-slate-700/50 p-4">
-                <dt className="muted mb-1">Miembro desde</dt>
+                <dt className="muted mb-1">{t("settings.memberSince")}</dt>
                 <dd className="font-semibold">
-                  {new Date(initialProfile.created_at).toLocaleDateString("es-ES", {
+                  {new Date(initialProfile.created_at).toLocaleDateString(locale, {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
@@ -228,7 +251,7 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Pro
                 </dd>
               </div>
               <div className="rounded-xl border border-slate-200/60 dark:border-slate-700/50 p-4">
-                <dt className="muted mb-1">Estado</dt>
+                <dt className="muted mb-1">{t("settings.status")}</dt>
                 <dd>
                   <span
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
@@ -238,7 +261,9 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Pro
                     }`}
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                    {initialProfile.is_email_verified ? "Email verificado" : "Email no verificado"}
+                    {initialProfile.is_email_verified
+                      ? t("settings.emailVerified")
+                      : t("settings.emailNotVerified")}
                   </span>
                 </dd>
               </div>

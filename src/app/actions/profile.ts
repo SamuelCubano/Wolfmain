@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAuth, hashPassword, verifyPassword } from "@/lib/auth";
+import { getServerT } from "@/lib/locale-server";
 import prisma from "@/prisma/client";
 
 export type ProfileActionState = {
@@ -16,22 +17,12 @@ const updateProfileSchema = z.object({
   bio: z.string().max(500).optional(),
 });
 
-const changePasswordSchema = z
-  .object({
-    currentPassword: z.string().min(1, "La contraseña actual es obligatoria"),
-    newPassword: z.string().min(8, "La nueva contraseña debe tener al menos 8 caracteres"),
-    confirmNewPassword: z.string(),
-  })
-  .refine((data) => data.newPassword === data.confirmNewPassword, {
-    message: "Las contraseñas no coinciden",
-    path: ["confirmNewPassword"],
-  });
-
 export async function updateProfileAction(
   _prevState: ProfileActionState | null,
   formData: FormData
 ): Promise<ProfileActionState> {
   const user = await requireAuth();
+  const t = await getServerT();
 
   const raw = {
     display_name: (formData.get("display_name") as string) || "",
@@ -41,7 +32,7 @@ export async function updateProfileAction(
   const parsed = updateProfileSchema.safeParse(raw);
   if (!parsed.success) {
     return {
-      message: "Errores de validación",
+      message: t("server.validation"),
       errors: parsed.error.flatten().fieldErrors,
     };
   }
@@ -55,7 +46,7 @@ export async function updateProfileAction(
   });
 
   revalidatePath("/settings");
-  return { success: true, message: "Perfil actualizado" };
+  return { success: true, message: t("server.profileUpdated") };
 }
 
 export async function changePasswordAction(
@@ -63,6 +54,18 @@ export async function changePasswordAction(
   formData: FormData
 ): Promise<ProfileActionState> {
   const session = await requireAuth();
+  const t = await getServerT();
+
+  const changePasswordSchema = z
+    .object({
+      currentPassword: z.string().min(1, t("server.currentPasswordRequired")),
+      newPassword: z.string().min(8, t("server.newPasswordMin")),
+      confirmNewPassword: z.string(),
+    })
+    .refine((data) => data.newPassword === data.confirmNewPassword, {
+      message: t("server.passwordsMismatch"),
+      path: ["confirmNewPassword"],
+    });
 
   const raw = {
     currentPassword: formData.get("currentPassword") as string,
@@ -73,7 +76,7 @@ export async function changePasswordAction(
   const parsed = changePasswordSchema.safeParse(raw);
   if (!parsed.success) {
     return {
-      message: "Errores de validación",
+      message: t("server.validation"),
       errors: parsed.error.flatten().fieldErrors,
     };
   }
@@ -85,8 +88,8 @@ export async function changePasswordAction(
 
   if (!user || !(await verifyPassword(parsed.data.currentPassword, user.password_hash))) {
     return {
-      message: "Contraseña actual incorrecta",
-      errors: { currentPassword: ["Contraseña actual incorrecta"] },
+      message: t("server.currentPasswordWrong"),
+      errors: { currentPassword: [t("server.currentPasswordWrong")] },
     };
   }
 
@@ -96,7 +99,7 @@ export async function changePasswordAction(
     data: { password_hash: newHash },
   });
 
-  return { success: true, message: "Contraseña actualizada" };
+  return { success: true, message: t("server.passwordUpdated") };
 }
 
 export async function getProfileAction() {

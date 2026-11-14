@@ -1,8 +1,10 @@
-"use server";
+﻿"use server";
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth";
+import { getServerLang, getServerT } from "@/lib/locale-server";
+import type { Translate } from "@/lib/i18n";
 import prisma from "@/prisma/client";
 
 export type FileHistoryEntry = {
@@ -27,12 +29,13 @@ export type ProjectFile = {
 };
 
 async function assertProjectOwner(projectId: string, userId: string) {
+  const t = await getServerT();
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     select: { id: true, owner_id: true, name: true },
   });
   if (!project || project.owner_id !== userId) {
-    throw new Error("Proyecto no encontrado o sin permisos");
+    throw new Error(t("server.projectNotFound"));
   }
   return project;
 }
@@ -53,6 +56,20 @@ function languageFromName(name: string): string | null {
     svg: "xml",
   };
   return ext ? map[ext] ?? "plaintext" : "plaintext";
+}
+
+function createFileSchema(t: Translate) {
+  return z.object({
+    projectId: z.string().min(1),
+    name: z
+      .string()
+      .min(1, t("server.file.nameRequired"))
+      .max(80, t("server.file.nameTooLong"))
+      .refine((n) => !/[\\/:*?"<>|]/.test(n), t("server.file.nameInvalidChars"))
+      .refine((n) => n !== "." && n !== "..", t("server.file.nameInvalid")),
+    parentId: z.string().nullable().optional(),
+    isFolder: z.boolean().optional(),
+  });
 }
 
 export async function getProjectEditorDataAction(projectId: string) {
@@ -76,18 +93,6 @@ export async function getProjectEditorDataAction(projectId: string) {
   return { project, files };
 }
 
-const createFileSchema = z.object({
-  projectId: z.string().min(1),
-  name: z
-    .string()
-    .min(1, "Nombre requerido")
-    .max(80, "Nombre demasiado largo")
-    .refine((n) => !/[\\/:*?"<>|]/.test(n), "Nombre contiene caracteres no permitidos")
-    .refine((n) => n !== "." && n !== "..", "Nombre inválido"),
-  parentId: z.string().nullable().optional(),
-  isFolder: z.boolean().optional(),
-});
-
 export async function createProjectFileAction(input: {
   projectId: string;
   name: string;
@@ -95,9 +100,11 @@ export async function createProjectFileAction(input: {
   isFolder?: boolean;
 }) {
   const user = await requireAuth();
-  const parsed = createFileSchema.safeParse(input);
+  const lang = await getServerLang();
+  const t = await getServerT();
+  const parsed = createFileSchema(t).safeParse(input);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message || "Datos inválidos" };
+    return { error: parsed.error.issues[0]?.message || t("server.invalidData") };
   }
   const { projectId, name, parentId, isFolder } = parsed.data;
   await assertProjectOwner(projectId, user.id);
@@ -108,7 +115,7 @@ export async function createProjectFileAction(input: {
       where: { id: parentId, project_id: projectId, is_folder: true },
       select: { path: true },
     });
-    if (!parent) return { error: "Carpeta padre no encontrada" };
+    if (!parent) return { error: t("server.file.parentNotFound") };
     parentPath = parent.path;
   }
 
@@ -117,12 +124,12 @@ export async function createProjectFileAction(input: {
     where: { project_id_path: { project_id: projectId, path } },
     select: { id: true },
   });
-  if (existing) return { error: "Ya existe un archivo o carpeta con ese nombre" };
+  if (existing) return { error: t("server.file.exists") };
 
   const defaultContent = isFolder
     ? null
     : name.endsWith(".html")
-      ? `<!DOCTYPE html>\n<html lang="es">\n<head>\n  <meta charset="UTF-8" />\n  <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n  <title>${name.replace(/\.html$/i, "")}</title>\n</head>\n<body>\n  \n</body>\n</html>\n`
+      ? `<!DOCTYPE html>\n<html lang="${lang}">\n<head>\n  <meta charset="UTF-8" />\n  <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n  <title>${name.replace(/\.html$/i, "")}</title>\n</head>\n<body>\n  \n</body>\n</html>\n`
       : name.endsWith(".css")
         ? "/* styles */\n"
         : name.endsWith(".js")
@@ -165,17 +172,18 @@ export async function saveProjectFileAction(input: {
   recordHistory?: boolean;
 }) {
   const user = await requireAuth();
+  const t = await getServerT();
   await assertProjectOwner(input.projectId, user.id);
   const file = await prisma.file.findFirst({
     where: { id: input.fileId, project_id: input.projectId, is_folder: false },
     select: { id: true, content: true },
   });
-  if (!file) return { error: "Archivo no encontrado" };
+  if (!file) return { error: t("server.file.notFound") };
 
   const nextContent = input.content;
   const shouldRecord = !!input.recordHistory;
   const message = (input.commitMessage || "").trim();
-  if (shouldRecord && !message) return { error: "El mensaje del cambio es obligatorio" };
+  if (shouldRecord && !message) return { error: t("server.file.commitRequired") };
 
   const updated = await prisma.$transaction(async (tx) => {
     if (shouldRecord) {
@@ -239,18 +247,14 @@ export async function deleteProjectFileAction(input: {
   fileId: string;
 }) {
   const user = await requireAuth();
+  const t = await getServerT();
   await assertProjectOwner(input.projectId, user.id);
   const file = await prisma.file.findFirst({
     where: { id: input.fileId, project_id: input.projectId },
     select: { id: true, is_folder: true },
   });
-  if (!file) return { error: "Archivo no encontrado" };
-  if (file.is_folder) {
-    // delete children by path prefix handled by FK? parent relation has no cascade on children via path; schema: parent File relation cascade on parent delete? "parent File? @relation(..., onDelete: Cascade)" means deleting parent cascades to this row? Wait: on File.parent relation: fields [parent_id] references parent id, onDelete Cascade - so deleting the referenced parent cascades delete of children. Yes.
-    await prisma.file.delete({ where: { id: input.fileId } });
-  } else {
-    await prisma.file.delete({ where: { id: input.fileId } });
-  }
+  if (!file) return { error: t("server.file.notFound") };
+  await prisma.file.delete({ where: { id: input.fileId } });
   revalidatePath(`/editor`);
   return { ok: true };
 }
@@ -261,15 +265,16 @@ export async function renameProjectFileAction(input: {
   name: string;
 }) {
   const user = await requireAuth();
+  const t = await getServerT();
   await assertProjectOwner(input.projectId, user.id);
   const name = input.name.trim();
-  if (!name || /[\\/:*?"<>|]/.test(name)) return { error: "Nombre inválido" };
+  if (!name || /[\\/:*?"<>|]/.test(name)) return { error: t("server.file.nameInvalid") };
 
   const file = await prisma.file.findFirst({
     where: { id: input.fileId, project_id: input.projectId },
     select: { id: true, parent_id: true, is_folder: true, path: true },
   });
-  if (!file) return { error: "Archivo no encontrado" };
+  if (!file) return { error: t("server.file.notFound") };
 
   let parentPath = "";
   if (file.parent_id) {
@@ -281,7 +286,7 @@ export async function renameProjectFileAction(input: {
     where: { project_id_path: { project_id: input.projectId, path: newPath } },
     select: { id: true },
   });
-  if (conflict && conflict.id !== file.id) return { error: "Ya existe ese nombre" };
+  if (conflict && conflict.id !== file.id) return { error: t("server.file.nameTaken") };
 
   const oldPath = file.path;
   const updated = await prisma.file.update({
@@ -299,7 +304,6 @@ export async function renameProjectFileAction(input: {
   });
 
   if (file.is_folder) {
-    // update descendants paths
     const descendants = await prisma.file.findMany({
       where: { project_id: input.projectId, path: { startsWith: oldPath + "/" } },
       select: { id: true, path: true },

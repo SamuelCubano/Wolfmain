@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { registerSchema, loginSchema } from "@/lib/validations";
 import { hashPassword, verifyPassword, setSessionCookie, clearSessionCookie, getCurrentUser } from "@/lib/auth";
 import type { SessionUser } from "@/lib/auth";
+import { getServerLang, getServerT } from "@/lib/locale-server";
 import prisma from "@/prisma/client";
 
 export type AuthState = {
@@ -15,6 +16,9 @@ export async function registerAction(
   prevState: AuthState | null,
   formData: FormData
 ): Promise<AuthState> {
+  const lang = await getServerLang();
+  const t = await getServerT();
+
   const raw = {
     username: formData.get("username") as string,
     email: formData.get("email") as string,
@@ -22,10 +26,10 @@ export async function registerAction(
     confirmPassword: formData.get("confirmPassword") as string,
   };
 
-  const parsed = registerSchema.safeParse(raw);
+  const parsed = registerSchema(lang).safeParse(raw);
   if (!parsed.success) {
     return {
-      message: "Errores de validación",
+      message: t("server.validation"),
       errors: parsed.error.flatten().fieldErrors,
     };
   }
@@ -42,10 +46,10 @@ export async function registerAction(
   });
 
   const errors: Record<string, string[]> = {};
-  if (existingByEmail) errors.email = ["El correo ya está en uso"];
-  if (existingByUsername) errors.username = ["El usuario ya está en uso"];
+  if (existingByEmail) errors.email = [t("server.emailTaken")];
+  if (existingByUsername) errors.username = [t("server.usernameTaken")];
   if (Object.keys(errors).length > 0) {
-    return { message: "El correo o el usuario ya están registrados", errors };
+    return { message: t("server.emailOrUsernameTaken"), errors };
   }
 
   const passwordHash = await hashPassword(password);
@@ -68,15 +72,18 @@ export async function loginAction(
   prevState: AuthState | null,
   formData: FormData
 ): Promise<AuthState> {
+  const lang = await getServerLang();
+  const t = await getServerT();
+
   const raw = {
     email: formData.get("email") as string,
     password: formData.get("password") as string,
   };
 
-  const parsed = loginSchema.safeParse(raw);
+  const parsed = loginSchema(lang).safeParse(raw);
   if (!parsed.success) {
     return {
-      message: "Errores de validación",
+      message: t("server.validation"),
       errors: parsed.error.flatten().fieldErrors,
     };
   }
@@ -90,8 +97,8 @@ export async function loginAction(
 
   if (!user || !(await verifyPassword(password, user.password_hash))) {
     return {
-      message: "Credenciales inválidas",
-      errors: { email: ["Correo o contraseña incorrectos"] },
+      message: t("server.invalidCredentials"),
+      errors: { email: [t("server.wrongEmailOrPassword")] },
     };
   }
 

@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import jwt from "jsonwebtoken";
+import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET!;
-if (!JWT_SECRET) throw new Error("NEXTAUTH_SECRET environment variable is required");
-const COOKIE_NAME = "wolfmain_session";
+const JWT_SECRET = process.env.NEXTAUTH_SECRET;
 
 const PUBLIC_ROUTES = ["/login", "/register"];
 const PROTECTED_PREFIXES = ["/editor", "/dashboard", "/settings"];
@@ -17,18 +15,13 @@ function isProtectedRoute(pathname: string) {
   return PROTECTED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + "/"));
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const token = request.cookies.get(COOKIE_NAME)?.value;
+  const token = request.cookies.get(SESSION_COOKIE)?.value;
 
   let isAuthenticated = false;
-  if (token) {
-    try {
-      jwt.verify(token, JWT_SECRET);
-      isAuthenticated = true;
-    } catch {
-      isAuthenticated = false;
-    }
+  if (token && JWT_SECRET) {
+    isAuthenticated = !!(await verifySessionToken(token, JWT_SECRET));
   }
 
   if (isAuthenticated && isPublicRoute(pathname)) {
