@@ -23,8 +23,16 @@ function applyTheme(resolved: "light" | "dark") {
   root.style.colorScheme = resolved;
 }
 
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
 function readInitialMode(): ThemeMode {
   if (typeof window === "undefined") return "system";
+  const cookie = readCookie("wolfmain-theme") as ThemeMode | null;
+  if (cookie === "light" || cookie === "dark" || cookie === "system") return cookie;
   const saved = localStorage.getItem("wolfmain-theme") as ThemeMode | null;
   return saved === "light" || saved === "dark" || saved === "system" ? saved : "system";
 }
@@ -41,7 +49,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setModeState(nextMode);
     setResolved(nextResolved);
     applyTheme(nextResolved);
-    localStorage.setItem("wolfmain-theme", nextMode);
+    try {
+      localStorage.setItem("wolfmain-theme", nextMode);
+      document.cookie = `wolfmain-theme=${encodeURIComponent(nextMode)}; path=/; max-age=31536000; samesite=lax`;
+    } catch {}
   }, []);
 
   useEffect(() => {

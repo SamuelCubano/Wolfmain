@@ -72,39 +72,49 @@ export async function loginAction(
   prevState: AuthState | null,
   formData: FormData
 ): Promise<AuthState> {
-  const lang = await getServerLang();
-  const t = await getServerT();
+  try {
+    const lang = await getServerLang();
+    const t = await getServerT();
 
-  const raw = {
-    email: formData.get("email") as string,
-    password: formData.get("password") as string,
-  };
-
-  const parsed = loginSchema(lang).safeParse(raw);
-  if (!parsed.success) {
-    return {
-      message: t("server.validation"),
-      errors: parsed.error.flatten().fieldErrors,
+    const raw = {
+      identifier: (formData.get("identifier") as string | null)?.trim() ?? "",
+      password: formData.get("password") as string,
     };
+
+    const parsed = loginSchema(lang).safeParse(raw);
+    if (!parsed.success) {
+      return {
+        message: t("server.validation"),
+        errors: parsed.error.flatten().fieldErrors,
+      };
+    }
+
+    const { identifier, password } = parsed.data;
+
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: identifier }, { username: identifier }],
+      },
+      select: { id: true, email: true, password_hash: true },
+    });
+
+    if (!user || !(await verifyPassword(password, user.password_hash))) {
+      return {
+        message: t("server.wrongEmailOrPassword"),
+        errors: { password: [t("server.wrongEmailOrPassword")] },
+      };
+    }
+
+    await setSessionCookie(user.id, user.email);
+
+    redirect("/dashboard");
+  } catch (error) {
+    if (error && typeof error === "object" && "digest" in error) {
+      throw error;
+    }
+    const t = await getServerT().catch(() => (key: string) => key);
+    return { message: t("server.wrongEmailOrPassword") };
   }
-
-  const { email, password } = parsed.data;
-
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true, email: true, password_hash: true },
-  });
-
-  if (!user || !(await verifyPassword(password, user.password_hash))) {
-    return {
-      message: t("server.invalidCredentials"),
-      errors: { email: [t("server.wrongEmailOrPassword")] },
-    };
-  }
-
-  await setSessionCookie(user.id, user.email);
-
-  redirect("/dashboard");
 }
 
 export async function logoutAction() {

@@ -26,7 +26,7 @@ export function registerSchema(lang: Lang = "en") {
 export function loginSchema(lang: Lang = "en") {
   const t = getTranslator(lang);
   return z.object({
-    email: z.string().email(t("server.emailInvalid")),
+    identifier: z.string().min(1, t("server.identifierRequired")),
     password: z.string().min(1, t("server.passwordRequired")),
   });
 }

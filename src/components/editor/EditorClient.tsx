@@ -42,16 +42,52 @@ function buildTree(files: ProjectFile[]): FileNode[] {
   return roots;
 }
 
-function iconFor(file: Pick<ProjectFile, "is_folder" | "name">, open?: boolean) {
-  if (file.is_folder) return open ? "📂" : "📁";
+function FileIcon({ file, open }: { file: Pick<ProjectFile, "is_folder" | "name">; open?: boolean }) {
+  const cls = "w-4 h-4 shrink-0";
+  if (file.is_folder) {
+    return open ? (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+        <path d="M3.5 7.5a2 2 0 0 1 2-2h4.2l1.8 2h7a2 2 0 0 1 2 2v1.5" />
+        <path d="M3.5 11h17v5.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" />
+      </svg>
+    ) : (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+        <path d="M3.5 7.5a2 2 0 0 1 2-2h4.2l1.8 2h7a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" />
+        <path d="M3.5 10.5h17" />
+      </svg>
+    );
+  }
   const ext = file.name.split(".").pop()?.toLowerCase();
-  if (ext === "html" || ext === "htm") return "🌐";
-  if (ext === "css") return "🎨";
-  if (ext === "js" || ext === "jsx") return "📜";
-  if (ext === "ts" || ext === "tsx") return "🧩";
-  if (ext === "json") return "🧾";
-  if (ext === "md") return "📝";
-  return "📄";
+  if (ext === "html" || ext === "htm") return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+      <circle cx="12" cy="12" r="9" /><path d="M3.5 12h17M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3Z" />
+    </svg>
+  );
+  if (ext === "css") return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+      <path d="M12 3a9 9 0 1 0 0 18h1.5a2.5 2.5 0 0 0 0-5H12a2 2 0 0 1 0-4h2.2A3.8 3.8 0 0 0 18 8.2 5.2 5.2 0 0 0 12.8 3Z" />
+    </svg>
+  );
+  if (ext === "js" || ext === "jsx" || ext === "ts" || ext === "tsx") return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+      <path d="M8 7l-4 5 4 5M16 7l4 5-4 5M13 5l-2 14" />
+    </svg>
+  );
+  if (ext === "json") return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+      <path d="M8 4c-2 0-2 1.5-2 3s0 2-2 2.5c2 .5 2 1 2 2.5s0 3 2 3M16 4c2 0 2 1.5 2 3s0 2 2 2.5c-2 .5-2 1-2 2.5s0 3-2 3" />
+    </svg>
+  );
+  if (ext === "md") return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+      <path d="M6 18V6h3l3 4 3-4h3v12" />
+    </svg>
+  );
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+      <path d="M7 3.5h6l4 4v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-15a2 2 0 0 1 2-2Z" /><path d="M13 3.5v4h4" />
+    </svg>
+  );
 }
 
 function languageFor(file: ProjectFile | null): string {
@@ -115,7 +151,7 @@ function showExternalOverlay(href){
     +'<div style="position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,.55);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif">'
     +'<div style="width:min(720px,100%);background:#0b0b0b;color:#fafafa;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.55);overflow:hidden">'
     +'<div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(255,255,255,.04),transparent)">'
-    +'<span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:rgba(16,185,129,.18);color:#34d399;font-weight:700">✓</span>'
+    +'<span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:rgba(137,160,179,.18);color:#b7c7bc;font-weight:700">i</span>'
     +'<span style="font-size:13px;font-weight:600;letter-spacing:.01em">'+esc(t("editor.externalTitle"))+'</span>'
     +'</div>'
     +'<div style="padding:20px 18px 8px">'
@@ -407,11 +443,11 @@ export default function EditorClient({ projectId }: { projectId: string | null }
     return (
       <div key={node.id}>
         <div
-          className={`group flex items-center gap-1.5 rounded-lg px-2 py-2 text-sm cursor-pointer select-none transition ${
-            isActive
-              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-              : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-          }`}
+            className={`group flex items-center gap-1.5 rounded-lg px-2 py-2 text-sm cursor-pointer select-none transition ${
+              isActive
+                ? "bg-[color:color-mix(in_srgb,var(--accent-dusk)_16%,transparent)] text-[var(--accent-strong)] dark:text-[var(--accent-bright)]"
+                : "text-slate-700 dark:text-slate-200 hover:bg-[color:color-mix(in_srgb,var(--accent-dusk)_10%,transparent)]"
+            }`}
           style={{ paddingLeft: `${8 + depth * 12}px` }}
           onClick={() => {
             if (node.is_folder) toggleFolder(node.id);
@@ -421,8 +457,14 @@ export default function EditorClient({ projectId }: { projectId: string | null }
             }
           }}
         >
-          <span className="w-4 text-center text-xs opacity-70">{node.is_folder ? (isOpen ? "▾" : "▸") : ""}</span>
-          <span>{iconFor(node, isOpen)}</span>
+          <span className="w-4 text-center text-xs opacity-70">
+            {node.is_folder ? (
+              <svg viewBox="0 0 20 20" fill="currentColor" className={`w-3.5 h-3.5 inline transition-transform ${isOpen ? "rotate-90" : ""}`}>
+                <path d="M7 5l6 5-6 5V5z" />
+              </svg>
+            ) : null}
+          </span>
+          <span className="text-[var(--accent-strong)] dark:text-[var(--accent-bright)] opacity-90"><FileIcon file={node} open={isOpen} /></span>
           {isRenaming ? (
             <input
               autoFocus
@@ -434,12 +476,12 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                 if (e.key === "Escape") setRenamingId(null);
               }}
               onClick={(e) => e.stopPropagation()}
-              className="flex-1 min-w-0 rounded bg-white dark:bg-slate-900 border border-emerald-500/40 px-1 py-0.5 text-xs outline-none"
+              className="flex-1 min-w-0 rounded bg-white dark:bg-slate-900 border border-[var(--card-border)] px-1 py-0.5 text-xs outline-none focus:border-[color:color-mix(in_srgb,var(--accent-dusk)_55%,var(--card-border))]"
             />
           ) : (
             <span className="flex-1 truncate" title={node.path}>
               {node.name}
-              {isDirty ? <span className="ml-1 text-emerald-500">•</span> : null}
+              {isDirty ? <span className="ml-1 text-[var(--accent-dusk)]">•</span> : null}
             </span>
           )}
           {projectId && !isRenaming && (
@@ -465,9 +507,9 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                   setRenamingId(node.id);
                   setRenameValue(node.name);
                 }}
-                className="px-1.5 py-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-xs"
+                className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700"
               >
-                ✎
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
               </button>
               <button
                 title={t("editor.deleteTitle")}
@@ -475,9 +517,9 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                   e.stopPropagation();
                   handleDelete(node);
                 }}
-                className="px-1.5 py-0.5 rounded text-red-500 hover:bg-red-500/10 text-xs"
+                className="p-1 rounded text-red-500 hover:bg-red-500/10"
               >
-                ×
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M3 6h18"/><path d="M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6"/><path d="M7 6l1 13a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-13"/></svg>
               </button>
             </span>
           )}
@@ -494,7 +536,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                 if (e.key === "Escape") setCreating(null);
               }}
               placeholder={creating.folder ? t("editor.folderNamePlaceholder") : t("editor.fileNamePlaceholder")}
-              className="w-full rounded-lg bg-white dark:bg-slate-900 border border-emerald-500/40 px-2 py-1.5 text-xs outline-none"
+              className="w-full rounded-lg bg-white dark:bg-slate-900 border border-[var(--card-border)] px-2 py-1.5 text-xs outline-none focus:border-[color:color-mix(in_srgb,var(--accent-dusk)_55%,var(--card-border))]"
             />
           </div>
         )}
@@ -504,7 +546,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
 
   const canSave = !!projectId && !!activeFile && dirtyIds.has(activeFile.id);
   const statusClass =
-    statusTone === "ok" ? "text-emerald-600 dark:text-emerald-400" : statusTone === "err" ? "text-red-600 dark:text-red-400" : "muted";
+    statusTone === "ok" ? "text-[var(--accent)] dark:text-[var(--accent-bright)]" : statusTone === "err" ? "text-red-600 dark:text-red-400" : "muted";
 
   return (
     <main className="flex-1 app-bg flex flex-col min-h-0">
@@ -517,14 +559,14 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                 className="btn btn-ghost !py-1.5 !px-2.5 text-sm lg:hidden"
                 aria-label={t("editor.explorer")}
               >
-                ☰
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="w-4 h-4"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
               </button>
             )}
             <h1 className="text-sm sm:text-base font-bold tracking-tight truncate">
               {projectName ? projectName : t("editor.quick")}
             </h1>
             {projectId ? (
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[color:color-mix(in_srgb,var(--accent-dusk)_15%,transparent)] text-[var(--accent-strong)] dark:text-[var(--accent-bright)] border border-[var(--card-border)]">
                 {t("editor.project")}
               </span>
             ) : (
@@ -644,7 +686,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                             if (e.key === "Escape") setCreating(null);
                           }}
                           placeholder={creating.folder ? t("editor.folderNamePlaceholder") : t("editor.fileNamePlaceholder")}
-                          className="w-full rounded-lg bg-white dark:bg-slate-900 border border-emerald-500/40 px-2 py-1.5 text-xs outline-none"
+            className="w-full rounded-lg bg-white dark:bg-slate-900 border border-[var(--card-border)] px-2 py-1.5 text-xs outline-none focus:border-[color:color-mix(in_srgb,var(--accent-dusk)_55%,var(--card-border))]"
                         />
                       </div>
                     )}
@@ -736,10 +778,10 @@ export default function EditorClient({ projectId }: { projectId: string | null }
             aria-live="polite"
             role="status"
           >
-            <div className="pointer-events-auto rounded-2xl border border-emerald-500/25 bg-white/95 dark:bg-slate-950/95 shadow-[0_20px_60px_-20px_rgba(16,185,129,.55)] backdrop-blur-sm overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-400" />
+            <div className="pointer-events-auto rounded-2xl border border-[var(--card-border)] bg-[color:color-mix(in_srgb,var(--card-strong)_92%,transparent)] shadow-[0_24px_60px_-24px_rgba(27,36,43,0.45)] backdrop-blur-sm overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-[#4f6658] via-[#7d8fa1] to-[#b7c7bc]" />
               <div className="p-4 flex gap-3 items-start">
-                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/20">
+                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color:color-mix(in_srgb,var(--accent-dusk)_14%,transparent)] text-[var(--accent)] dark:text-[var(--accent-bright)] ring-1 ring-[var(--card-border)]">
                   <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden="true">
                     <path
                       fillRule="evenodd"

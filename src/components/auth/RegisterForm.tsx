@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { registerAction } from "@/app/actions/auth";
 import type { AuthState } from "@/app/actions/auth";
+import Image from "next/image";
 import Link from "next/link";
 import { useT } from "@/components/locale/translate";
 
@@ -14,9 +15,14 @@ export default function RegisterForm() {
     <main className="flex-1 app-bg flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-lg font-bold shadow-lg shadow-emerald-500/25 mb-4">
-            W
-          </div>
+          <Image
+            src="/img/wolfmain-logo.png"
+            alt="Wolfmain"
+            width={48}
+            height={48}
+            className="inline-flex h-12 w-12 rounded-2xl mb-4"
+            priority
+          />
           <h1 className="text-2xl font-extrabold tracking-tight">{t("auth.createAccount")}</h1>
           <p className="muted mt-1">{t("auth.registerSubtitle")}</p>
         </div>
@@ -64,7 +70,7 @@ export default function RegisterForm() {
 
           <p className="mt-6 text-center text-sm muted">
             {t("auth.haveAccount")}{" "}
-            <Link href="/login" className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline">
+            <Link href="/login" className="text-[var(--accent)] dark:text-[var(--accent-bright)] font-semibold hover:underline">
               {t("auth.loginLink")}
             </Link>
           </p>

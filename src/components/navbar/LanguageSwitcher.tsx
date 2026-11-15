@@ -14,7 +14,7 @@ export default function LanguageSwitcher({ className = "" }: { className?: strin
 
   return (
     <div
-      className={`inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-0.5 ${className}`}
+      className={`inline-flex items-center rounded-xl border border-[var(--card-border)] bg-[color:color-mix(in_srgb,var(--card-strong)_70%,transparent)] p-1 gap-1 ${className}`}
       role="group"
       aria-label={t("lang.switch")}
       title={t("lang.switch")}
@@ -29,10 +29,10 @@ export default function LanguageSwitcher({ className = "" }: { className?: strin
             lang={code}
             aria-pressed={active}
             title={fullLabel[code]}
-            className={`px-2 py-1 text-xs font-bold rounded-lg transition ${
+            className={`px-2.5 py-1.5 text-xs font-bold rounded-lg transition ${
               active
-                ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm"
-                : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                ? "bg-[color:color-mix(in_srgb,var(--card-strong)_96%,transparent)] text-[var(--accent-strong)] dark:text-[var(--accent-bright)] shadow-sm border border-[var(--card-border)]"
+                : "text-[var(--muted)] hover:text-[var(--foreground)] border border-transparent"
             }`}
           >
             {shortLabel[code]}

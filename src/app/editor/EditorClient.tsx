@@ -50,7 +50,7 @@ export default function EditorClient() {
           <div className="flex items-center gap-3">
             <h1 className="text-base sm:text-lg font-bold tracking-tight">{t("editor.live")}</h1>
             {projectId && (
-              <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">
+              <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-[color:color-mix(in_srgb,var(--accent-dusk)_18%,transparent)] text-[var(--accent-strong)] dark:text-[var(--accent-bright)] border border-[var(--card-border)]">
                 {t("editor.project")} {projectId.slice(0, 8)}…
               </span>
             )}

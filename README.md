@@ -1,5 +1,9 @@
 # Wolfmain
 
+<p align="center">
+  <img src="public/img/wolfmain-logo.png" alt="Wolfmain logo" width="140" />
+</p>
+
 > **Your cloud code playground.** Create projects, write code, and see results instantly. No configuration, no Docker, no hassle.
 
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
@@ -9,6 +13,18 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql)](https://www.postgresql.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-06B6D4?logo=tailwindcss)](https://tailwindcss.com/)
 [![Monaco Editor](https://img.shields.io/badge/Monaco_Editor-0.52-007ACC?logo=visualstudiocode)](https://microsoft.github.io/monaco-editor/)
+
+---
+
+## Última actualización / Mejoras recientes
+
+- **Autenticación y UX de acceso:** inicio de sesión con correo o nombre de usuario (`identifier`), validaciones y mensajes de credenciales mejorados (EN/ES), y correcciones en el flujo de sesión/navbar (refresco de estado, cierre de sesión y comportamiento estable sin errores de consola/hidratación).
+- **Tema e idioma a nivel de dispositivo:** las preferencias de apariencia e idioma se guardan de forma global en el navegador (cookies + `localStorage`: `wolfmain-theme`, `wolfmain-lang`), se aplican temprano para evitar parpadeos y se mantienen al cerrar sesión o al entrar con otra cuenta en el mismo equipo.
+- **Consentimiento de cookies (primera visita):** banner de preferencias para aceptar/rechazar y formalizar el guardado de tema e idioma, manteniendo una experiencia consistente entre visitas.
+- **Branding renovado:** integración del nuevo logo de Wolfmain y actualización de favicons/recursos gráficos en la interfaz.
+- **Rediseño visual “forest dusk / wolf”:** nueva paleta y estilos para modo claro y oscuro (más contraste y riqueza visual en light mode), iconografía SVG (sin emojis), y modernización de componentes clave.
+- **Dashboard y navegación tipo plataforma profesional:** hero con métricas (proyectos/archivos), tarjetas y estados vacíos/búsqueda refinados, menú de usuario actualizado, selector de idioma movido a Configuración y nuevo footer global multiproposito de estilo profesional.
+- **Correcciones técnicas:** ajustes en `layout`/script de inicialización de tema, manejo de estados de React en navbar/logout y solución de errores de build/prerender detectados durante las mejoras.
 
 ---
 

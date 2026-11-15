@@ -44,8 +44,10 @@ export function LangProvider({ children }: { children: React.ReactNode }) {
   const setLang = useCallback((next: Lang) => {
     const normalized = normalizeLang(next);
     setLangState(normalized);
-    applyLang(normalized);
-    localStorage.setItem(LANG_COOKIE, normalized);
+    try {
+      applyLang(normalized);
+      localStorage.setItem(LANG_COOKIE, normalized);
+    } catch {}
   }, []);
 
   return (
