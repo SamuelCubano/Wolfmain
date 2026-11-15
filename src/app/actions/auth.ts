@@ -16,56 +16,67 @@ export async function registerAction(
   prevState: AuthState | null,
   formData: FormData
 ): Promise<AuthState> {
-  const lang = await getServerLang();
-  const t = await getServerT();
+  try {
+    const lang = await getServerLang();
+    const t = await getServerT();
 
-  const raw = {
-    username: formData.get("username") as string,
-    email: formData.get("email") as string,
-    password: formData.get("password") as string,
-    confirmPassword: formData.get("confirmPassword") as string,
-  };
+    const raw = {
+      username: formData.get("username") as string,
+      email: formData.get("email") as string,
+      password: formData.get("password") as string,
+      confirmPassword: formData.get("confirmPassword") as string,
+    };
 
-  const parsed = registerSchema(lang).safeParse(raw);
-  if (!parsed.success) {
+    const parsed = registerSchema(lang).safeParse(raw);
+    if (!parsed.success) {
+      return {
+        message: t("server.validation"),
+        errors: parsed.error.flatten().fieldErrors,
+      };
+    }
+
+    const { username, email, password } = parsed.data;
+
+    const existingByEmail = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    const existingByUsername = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+
+    const errors: Record<string, string[]> = {};
+    if (existingByEmail) errors.email = [t("server.emailTaken")];
+    if (existingByUsername) errors.username = [t("server.usernameTaken")];
+    if (Object.keys(errors).length > 0) {
+      return { message: t("server.emailOrUsernameTaken"), errors };
+    }
+
+    const passwordHash = await hashPassword(password);
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        username,
+        password_hash: passwordHash,
+      },
+      select: { id: true, email: true },
+    });
+
+    await setSessionCookie(user.id, user.email);
+
+    redirect("/dashboard");
+  } catch (error) {
+    if (error && typeof error === "object" && "digest" in error) {
+      throw error;
+    }
+    console.error("registerAction error:", error);
+    const t = await getServerT().catch(() => (key: string) => key);
     return {
-      message: t("server.validation"),
-      errors: parsed.error.flatten().fieldErrors,
+      message: t("server.invalidData") || "No se pudo crear la cuenta. Inténtalo de nuevo.",
     };
   }
-
-  const { username, email, password } = parsed.data;
-
-  const existingByEmail = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true },
-  });
-  const existingByUsername = await prisma.user.findUnique({
-    where: { username },
-    select: { id: true },
-  });
-
-  const errors: Record<string, string[]> = {};
-  if (existingByEmail) errors.email = [t("server.emailTaken")];
-  if (existingByUsername) errors.username = [t("server.usernameTaken")];
-  if (Object.keys(errors).length > 0) {
-    return { message: t("server.emailOrUsernameTaken"), errors };
-  }
-
-  const passwordHash = await hashPassword(password);
-
-  const user = await prisma.user.create({
-    data: {
-      email,
-      username,
-      password_hash: passwordHash,
-    },
-    select: { id: true, email: true },
-  });
-
-  await setSessionCookie(user.id, user.email);
-
-  redirect("/dashboard");
 }
 
 export async function loginAction(
