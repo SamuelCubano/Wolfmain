@@ -16,15 +16,15 @@
 
 ---
 
-## Última actualización / Mejoras recientes
+## Latest Update / Recent Improvements
 
-- **Autenticación y UX de acceso:** inicio de sesión con correo o nombre de usuario (`identifier`), validaciones y mensajes de credenciales mejorados (EN/ES), y correcciones en el flujo de sesión/navbar (refresco de estado, cierre de sesión y comportamiento estable sin errores de consola/hidratación).
-- **Tema e idioma a nivel de dispositivo:** las preferencias de apariencia e idioma se guardan de forma global en el navegador (cookies + `localStorage`: `wolfmain-theme`, `wolfmain-lang`), se aplican temprano para evitar parpadeos y se mantienen al cerrar sesión o al entrar con otra cuenta en el mismo equipo.
-- **Consentimiento de cookies (primera visita):** banner de preferencias para aceptar/rechazar y formalizar el guardado de tema e idioma, manteniendo una experiencia consistente entre visitas.
-- **Branding renovado:** integración del nuevo logo de Wolfmain y actualización de favicons/recursos gráficos en la interfaz.
-- **Rediseño visual “forest dusk / wolf”:** nueva paleta y estilos para modo claro y oscuro (más contraste y riqueza visual en light mode), iconografía SVG (sin emojis), y modernización de componentes clave.
-- **Dashboard y navegación tipo plataforma profesional:** hero con métricas (proyectos/archivos), tarjetas y estados vacíos/búsqueda refinados, menú de usuario actualizado, selector de idioma movido a Configuración y nuevo footer global multiproposito de estilo profesional.
-- **Correcciones técnicas:** ajustes en `layout`/script de inicialización de tema, manejo de estados de React en navbar/logout y solución de errores de build/prerender detectados durante las mejoras.
+- **Authentication and sign-in UX:** sign-in with email or username (`identifier`), improved credential validation and messages (EN/ES), and session/navbar flow fixes (state refresh, sign-out, and stable behavior without console/hydration errors).
+- **Device-level theme and language:** appearance and language preferences are stored globally in the browser (cookies + `localStorage`: `wolfmain-theme`, `wolfmain-lang`), applied early to avoid flashes, and preserved after sign-out or when signing in with another account on the same device.
+- **Cookie consent (first visit):** preference banner to accept/reject and formalize saving of theme and language, keeping a consistent experience across visits.
+- **Brand refresh:** integrated the new Wolfmain logo and updated favicons/graphic assets across the UI.
+- **“Forest dusk / wolf” visual redesign:** new palette and styles for light and dark modes (more contrast and a richer light mode), SVG iconography (no emojis), and modernization of key components.
+- **Professional platform-style dashboard and navigation:** hero with metrics (projects/files), refined project cards and empty/search states, updated user menu, language switcher moved to Settings, and a new global professional multi-purpose footer.
+- **Technical fixes:** adjustments to `layout`/theme initialization script, React state handling in navbar/logout, and fixes for build/prerender issues found during improvements.
 
 ---
 
