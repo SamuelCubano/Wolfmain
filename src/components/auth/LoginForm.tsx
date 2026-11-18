@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { loginAction } from "@/app/actions/auth";
 import type { AuthState } from "@/app/actions/auth";
 import Image from "next/image";
@@ -9,7 +10,12 @@ import { useT } from "@/components/locale/translate";
 
 export default function LoginForm() {
   const t = useT();
+  const router = useRouter();
   const [state, formAction, isPending] = useActionState(loginAction, null as AuthState | null);
+
+  useEffect(() => {
+    if (state?.success) router.replace("/dashboard");
+  }, [state?.success, router]);
 
   return (
     <main className="flex-1 app-bg flex items-center justify-center px-4 py-12">
@@ -49,8 +55,8 @@ export default function LoginForm() {
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{state.errors.password[0]}</p>
               )}
             </div>
-            <button type="submit" disabled={isPending} className="btn btn-primary w-full !py-2.5">
-              {isPending ? t("auth.signingIn") : t("auth.login")}
+            <button type="submit" disabled={isPending || !!state?.success} className="btn btn-primary w-full !py-2.5">
+              {isPending || state?.success ? t("auth.signingIn") : t("auth.login")}
             </button>
           </form>
 

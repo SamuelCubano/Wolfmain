@@ -34,7 +34,13 @@ const themeScript = `
     }
     var mode = readCookie('wolfmain-theme') || localStorage.getItem('wolfmain-theme') || 'system';
     var dark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    if (dark) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
+    if (dark) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
     document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
     var lang = readCookie('wolfmain-lang') || localStorage.getItem('wolfmain-lang') || 'en';
     if (lang !== 'en' && lang !== 'es') lang = 'en';

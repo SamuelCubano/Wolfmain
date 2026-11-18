@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getSessionAction, logoutAction } from "@/app/actions/auth";
@@ -50,23 +50,46 @@ export default function AuthNavbar() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
+  const refreshSession = useCallback(() => {
     let cancelled = false;
     getSessionAction()
       .then((u) => {
         if (!cancelled) setUser(u);
       })
+      .catch(() => {})
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [pathname]);
+  }, []);
+
+  useEffect(() => {
+    return refreshSession();
+  }, [pathname, refreshSession]);
+
+  useEffect(() => {
+    function onPageShow(e: PageTransitionEvent) {
+      if (e.persisted) refreshSession();
+    }
+    function onHistoryChange() {
+      refreshSession();
+    }
+    function onVisibility() {
+      if (document.visibilityState === "visible") refreshSession();
+    }
+    window.addEventListener("pageshow", onPageShow);
+    window.addEventListener("popstate", onHistoryChange);
+    window.addEventListener("focus", onHistoryChange);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pageshow", onPageShow);
+      window.removeEventListener("popstate", onHistoryChange);
+      window.removeEventListener("focus", onHistoryChange);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [refreshSession]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -107,13 +130,13 @@ export default function AuthNavbar() {
         onClick={() => setOpen(!open)}
         className={`flex items-center gap-2 pl-1.5 pr-2.5 py-1.5 rounded-xl transition border ${
           open
-            ? "bg-[color:color-mix(in_srgb,var(--accent-dusk)_12%,var(--card-strong))] border-[color:color-mix(in_srgb,var(--accent-dusk)_35%,var(--card-border))]"
-            : "border-transparent hover:bg-[color:color-mix(in_srgb,var(--accent-dusk)_10%,transparent)] hover:border-[var(--card-border)]"
+            ? "bg-[var(--accent)] dark:bg-[var(--accent)] border-[var(--accent)]"
+            : "border-transparent hover:bg-[var(--accent)]/10 dark:hover:bg-[var(--accent)]/10 hover:border-[var(--accent)]/30"
         }`}
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#2a3d47] via-[#466354] to-[#6f8da3] text-white flex items-center justify-center text-sm font-bold shadow-sm ring-1 ring-white/15">
+        <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--accent)] via-[var(--accent-strong)] to-[var(--accent-dusk)] text-white flex items-center justify-center text-sm font-bold shadow-sm ring-1 ring-white/15">
           {user.username.charAt(0).toUpperCase()}
         </span>
         <span className="text-sm font-semibold text-[var(--foreground)] hidden sm:inline max-w-[120px] truncate">
@@ -132,11 +155,11 @@ export default function AuthNavbar() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2.5 w-72 rounded-2xl border border-[var(--card-border)] bg-[color:color-mix(in_srgb,var(--card-strong)_96%,transparent)] backdrop-blur-xl shadow-[var(--shadow)] overflow-hidden z-50"
+          className="absolute right-0 mt-2.5 w-72 rounded-2xl border border-[var(--card-border)] bg-[var(--card-strong)]/96 backdrop-blur-xl shadow-[var(--shadow)] overflow-hidden z-50"
         >
-          <div className="px-4 py-3.5 border-b border-[var(--card-border)] bg-[color:color-mix(in_srgb,var(--accent-dusk)_8%,transparent)]">
+          <div className="px-4 py-3.5 border-b border-[var(--card-border)] bg-[var(--accent)]/10">
             <div className="flex items-center gap-3">
-              <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#2a3d47] via-[#466354] to-[#6f8da3] text-white flex items-center justify-center text-sm font-bold shadow-sm ring-1 ring-white/15 shrink-0">
+              <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--accent)] via-[var(--accent-strong)] to-[var(--accent-dusk)] text-white flex items-center justify-center text-sm font-bold shadow-sm ring-1 ring-white/15 shrink-0">
                 {user.username.charAt(0).toUpperCase()}
               </span>
               <div className="min-w-0">
@@ -149,7 +172,7 @@ export default function AuthNavbar() {
             <Link
               href="/dashboard"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl text-[var(--foreground)] hover:bg-[color:color-mix(in_srgb,var(--accent-dusk)_12%,transparent)] hover:text-[var(--foreground)] transition-colors"
+              className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl text-[var(--foreground)] hover:bg-[var(--accent)]/10 hover:text-[var(--foreground)] transition-colors"
             >
               <span className="icon-wrap w-8 h-8 rounded-lg shrink-0"><IconProjects /></span>
               {t("nav.myProjects")}
@@ -157,7 +180,7 @@ export default function AuthNavbar() {
             <Link
               href="/editor"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl text-[var(--foreground)] hover:bg-[color:color-mix(in_srgb,var(--accent-dusk)_12%,transparent)] hover:text-[var(--foreground)] transition-colors"
+              className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl text-[var(--foreground)] hover:bg-[var(--accent)]/10 hover:text-[var(--foreground)] transition-colors"
             >
               <span className="icon-wrap w-8 h-8 rounded-lg shrink-0"><IconEditor /></span>
               {t("nav.quickEditor")}
@@ -165,7 +188,7 @@ export default function AuthNavbar() {
             <Link
               href="/settings"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl text-[var(--foreground)] hover:bg-[color:color-mix(in_srgb,var(--accent-dusk)_12%,transparent)] hover:text-[var(--foreground)] transition-colors"
+              className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl text-[var(--foreground)] hover:bg-[var(--accent)]/10 hover:text-[var(--foreground)] transition-colors"
             >
               <span className="icon-wrap w-8 h-8 rounded-lg shrink-0"><IconSettings /></span>
               {t("nav.settings")}

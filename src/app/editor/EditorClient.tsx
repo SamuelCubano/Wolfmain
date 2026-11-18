@@ -45,12 +45,12 @@ export default function EditorClient() {
 
   return (
     <main className="flex-1 app-bg">
-      <div className="border-b border-slate-200/60 dark:border-slate-800/60 bg-white/40 dark:bg-slate-950/30 backdrop-blur">
+      <div className="border-b border-[var(--card-border)] bg-[var(--card-strong)]/40 dark:bg-[var(--card-strong)]/30 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex justify-between items-center flex-wrap gap-2">
           <div className="flex items-center gap-3">
             <h1 className="text-base sm:text-lg font-bold tracking-tight">{t("editor.live")}</h1>
             {projectId && (
-              <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-[color:color-mix(in_srgb,var(--accent-dusk)_18%,transparent)] text-[var(--accent-strong)] dark:text-[var(--accent-bright)] border border-[var(--card-border)]">
+              <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-[var(--accent)]/15 text-[var(--accent-strong)] dark:text-[var(--accent-bright)] border border-[var(--card-border)]">
                 {t("editor.project")} {projectId.slice(0, 8)}…
               </span>
             )}
@@ -69,7 +69,7 @@ export default function EditorClient() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <div className="card overflow-hidden">
-            <div className="px-4 py-2.5 bg-slate-100/70 dark:bg-slate-800/60 border-b border-slate-200/60 dark:border-slate-700/50 flex items-center gap-2">
+            <div className="px-4 py-2.5 bg-[var(--card)]/70 dark:bg-[var(--card)]/60 border-b border-[var(--card-border)]/60 dark:border-[var(--card-border)]/50 flex items-center gap-2">
               <span className="flex gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-red-400/90" />
                 <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/90" />
@@ -90,7 +90,7 @@ export default function EditorClient() {
           </div>
 
           <div className="card overflow-hidden">
-            <div className="px-4 py-2.5 bg-slate-100/70 dark:bg-slate-800/60 border-b border-slate-200/60 dark:border-slate-700/50 flex items-center gap-2">
+            <div className="px-4 py-2.5 bg-[var(--card)]/70 dark:bg-[var(--card)]/60 border-b border-[var(--card-border)]/60 dark:border-[var(--card-border)]/50 flex items-center gap-2">
               <span className="flex gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-red-400/90" />
                 <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/90" />
@@ -98,10 +98,10 @@ export default function EditorClient() {
               </span>
               <span className="text-xs font-semibold muted uppercase tracking-wide">{t("editor.preview")}</span>
             </div>
-            <div className="h-[55vh] lg:h-[72vh] p-2 bg-slate-50 dark:bg-slate-900/40">
+            <div className="h-[55vh] lg:h-[72vh] p-2 bg-[var(--background)]">
               <iframe
                 ref={iframeRef}
-                className="w-full h-full border-0 rounded-xl bg-white shadow-sm"
+                className="w-full h-full border-0 rounded-xl bg-[var(--card-strong)] shadow-sm"
                 sandbox="allow-scripts allow-same-origin"
               />
             </div>

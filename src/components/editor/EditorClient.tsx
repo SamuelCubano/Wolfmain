@@ -536,7 +536,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                 if (e.key === "Escape") setCreating(null);
               }}
               placeholder={creating.folder ? t("editor.folderNamePlaceholder") : t("editor.fileNamePlaceholder")}
-              className="w-full rounded-lg bg-white dark:bg-slate-900 border border-[var(--card-border)] px-2 py-1.5 text-xs outline-none focus:border-[color:color-mix(in_srgb,var(--accent-dusk)_55%,var(--card-border))]"
+              className="w-full rounded-lg bg-[var(--card-strong)] dark:bg-[var(--card-strong)] border border-[var(--card-border)] px-2 py-1.5 text-xs outline-none focus:border-[color:color-mix(in_srgb,var(--accent-dusk)_55%,var(--card-border))]"
             />
           </div>
         )}
@@ -550,7 +550,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
 
   return (
     <main className="flex-1 app-bg flex flex-col min-h-0">
-      <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+      <div className="border-b border-[var(--card-border)] bg-[var(--card-strong)] dark:bg-[var(--card-strong)]">
         <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-3 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-wrap">
             {showExplorer && (
@@ -577,7 +577,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
           </div>
 
           <div className="flex flex-wrap gap-2 items-center">
-            <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 p-0.5 bg-slate-50 dark:bg-slate-900">
+            <div className="inline-flex rounded-xl border border-[var(--card-border)] p-0.5 bg-[var(--card)] dark:bg-[var(--card)]">
               {([
                 ["code", t("editor.view.code")],
                 ["split", t("editor.view.split")],
@@ -587,7 +587,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                   key={id}
                   onClick={() => setView(id)}
                   className={`px-2.5 py-1.5 text-xs sm:text-sm rounded-lg font-semibold transition ${
-                    view === id ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm" : "text-slate-600 dark:text-slate-300"
+                    view === id ? "bg-[var(--card-strong)] dark:bg-[var(--card-strong)] text-[var(--foreground)] dark:text-[var(--foreground)] shadow-sm" : "text-[var(--muted)] dark:text-[var(--muted)]"
                   }`}
                 >
                   {label}
@@ -625,7 +625,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 max-w-[1600px] w-full mx-auto p-2 sm:p-4 relative">
+      <div className="flex-1 min-h-0 max-w-[1600px] w-full mx-auto p-2 sm:p-4 relative bg-[var(--background)]">
         <div
           className={`grid gap-2 sm:gap-4 h-[calc(100dvh-11.5rem)] min-h-[420px] ${
             showExplorer
@@ -637,11 +637,11 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                 : "grid-cols-1"
           }`}
         >
-          {showExplorer && (
+{showExplorer && (
             <aside
-              className={`${explorerOpen ? "flex" : "hidden lg:flex"} card overflow-hidden flex-col min-h-0 absolute inset-x-2 top-2 bottom-2 z-20 lg:static lg:z-auto`}
+              className={`${explorerOpen ? "flex" : "hidden lg:flex"} card overflow-hidden flex-col min-h-0 absolute inset-x-2 top-2 bottom-2 z-20 lg:static lg:z-auto bg-[var(--card-strong)] dark:bg-[var(--card-strong)]`}
             >
-              <div className="px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+              <div className="px-3 py-2.5 bg-[var(--card)] dark:bg-[var(--card)] border-b border-[var(--card-border)] flex items-center justify-between gap-2">
                 <span className="text-[11px] font-bold muted uppercase tracking-wider">{t("editor.explorer")}</span>
                 <div className="flex gap-1">
                   <button
@@ -650,7 +650,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                       setCreating({ parentId: null, folder: false });
                       setNewName("");
                     }}
-                    className="text-xs px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="text-xs px-2 py-1 rounded-lg border border-[var(--card-border)] hover:bg-[var(--card)] dark:hover:bg-[var(--card)]"
                   >
                     {t("editor.newFileShort")}
                   </button>
@@ -660,7 +660,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                       setCreating({ parentId: null, folder: true });
                       setNewName("");
                     }}
-                    className="text-xs px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="text-xs px-2 py-1 rounded-lg border border-[var(--card-border)] hover:bg-[var(--card)] dark:hover:bg-[var(--card)]"
                   >
                     {t("editor.newFolderShort")}
                   </button>
@@ -686,7 +686,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                             if (e.key === "Escape") setCreating(null);
                           }}
                           placeholder={creating.folder ? t("editor.folderNamePlaceholder") : t("editor.fileNamePlaceholder")}
-            className="w-full rounded-lg bg-white dark:bg-slate-900 border border-[var(--card-border)] px-2 py-1.5 text-xs outline-none focus:border-[color:color-mix(in_srgb,var(--accent-dusk)_55%,var(--card-border))]"
+                          className="w-full rounded-lg bg-[var(--card-strong)] dark:bg-[var(--card-strong)] border border-[var(--card-border)] px-2 py-1.5 text-xs outline-none focus:border-[color:color-mix(in_srgb,var(--accent-dusk)_55%,var(--card-border))]"
                         />
                       </div>
                     )}
@@ -701,7 +701,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
 
           {(view === "code" || view === "split") && (
             <section className="card overflow-hidden flex flex-col min-h-0">
-              <div className="px-3 sm:px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 min-w-0">
+              <div className="px-3 sm:px-4 py-2.5 bg-[var(--card)] dark:bg-[var(--card)] border-b border-[var(--card-border)] flex items-center gap-2 min-w-0">
                 <span className="text-xs font-semibold muted uppercase tracking-wide truncate">
                   {activeFile ? activeFile.path : t("editor.editor")}
                 </span>
@@ -757,14 +757,14 @@ export default function EditorClient({ projectId }: { projectId: string | null }
 
           {(view === "preview" || view === "split") && (
             <section className="card overflow-hidden flex flex-col min-h-0">
-              <div className="px-3 sm:px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
+              <div className="px-3 sm:px-4 py-2.5 bg-[var(--card)] dark:bg-[var(--card)] border-b border-[var(--card-border)] flex items-center gap-2">
                 <span className="text-xs font-semibold muted uppercase tracking-wide">{t("editor.preview")}</span>
               </div>
-              <div className="flex-1 min-h-0 p-2 bg-slate-100 dark:bg-slate-900">
+              <div className="flex-1 min-h-0 p-2 bg-[var(--background)]">
                 <iframe
                   ref={iframeRef}
                   title={t("editor.preview")}
-                  className="w-full h-full border border-slate-200 dark:border-slate-800 rounded-xl bg-white"
+                  className="w-full h-full border border-[var(--card-border)] rounded-xl bg-[var(--card-strong)]"
                   sandbox="allow-scripts"
                 />
               </div>
@@ -802,7 +802,7 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                 <button
                   type="button"
                   onClick={() => setSaveSuccess(null)}
-                  className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition"
+                  className="shrink-0 rounded-lg p-1.5 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card)] dark:hover:text-[var(--foreground)] dark:hover:bg-[var(--card)] transition"
                   aria-label={t("editor.dismiss")}
                 >
                   <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
@@ -815,8 +815,8 @@ export default function EditorClient({ projectId }: { projectId: string | null }
         )}
 
         {saveOpen && (
-          <div className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/20">
-            <div className="w-full max-w-lg card p-5 sm:p-6 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950">
+          <div className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-[var(--background)]/80">
+            <div className="w-full max-w-lg card p-5 sm:p-6 border-[var(--card-border)] bg-[var(--card-strong)] dark:bg-[var(--card-strong)]">
               <h2 className="text-lg font-bold">{t("editor.saveToHistory")}</h2>
               <p className="text-sm muted mt-1">
                 {t("editor.saveToHistoryDesc")}
@@ -847,8 +847,8 @@ export default function EditorClient({ projectId }: { projectId: string | null }
 
         {historyOpen && (
           <div className="absolute inset-y-2 right-2 sm:right-4 z-20 w-[min(420px,calc(100%-1rem))]">
-            <div className="card h-full flex flex-col overflow-hidden bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800">
-              <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+            <div className="card h-full flex flex-col overflow-hidden bg-[var(--card-strong)] dark:bg-[var(--card-strong)] border-[var(--card-border)]">
+              <div className="px-4 py-3 border-b border-[var(--card-border)] flex items-center justify-between gap-2">
                 <div>
                   <h2 className="font-bold">{t("editor.changeHistory")}</h2>
                   <p className="text-xs muted">{t("editor.historySubtitle")}</p>
@@ -864,10 +864,10 @@ export default function EditorClient({ projectId }: { projectId: string | null }
                   <p className="text-sm muted p-2">{t("editor.noHistory")}</p>
                 ) : (
                   history.map((h) => (
-                    <article key={h.id} className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 bg-slate-50/70 dark:bg-slate-900/50">
+                    <article key={h.id} className="rounded-xl border border-[var(--card-border)] p-3 bg-[var(--card)] dark:bg-[var(--card)]">
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm font-semibold leading-snug">{h.commit_message || t("editor.noMessage")}</p>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--card-strong)] dark:bg-[var(--card-strong)] shrink-0">
                           v{h.version_number}
                         </span>
                       </div>

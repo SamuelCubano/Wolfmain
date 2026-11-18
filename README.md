@@ -18,6 +18,11 @@
 
 ## Latest Update / Recent Improvements
 
+- **Database connectivity (Supabase):** the project now connects through a Supabase Postgres instance using `DATABASE_URL` (pooled connection, port `6543`, with `pgbouncer=true`) and `DIRECT_URL` (session pooler, port `5432`, used for migrations). This removes the Prisma Accelerate tenant requirement that caused the `ENOIDENTIFIER` / *no tenant identifier provided* failures, and the Prisma Client is regenerated on install.
+- **Session-aware navigation:** the navbar revalidates the session on browser back/forward and bfcache restores (`popstate` / `pageshow`), so it no longer shows “Log in / Register” while a session is still active.
+- **Auth route protection:** authenticated users are redirected away from `/login` and `/register` to `/dashboard` (middleware plus a client-side guard that also covers bfcache restores).
+- **Cleaner sign-in flow:** successful login/registration navigate with `router.replace`, so the auth page is not kept in history and pressing Back no longer flashes the login screen.
+- **Theme tokens:** the resolved theme is written to `data-theme` early (layout script + provider) to avoid flashes, and the editor, preview and language switcher now use design tokens instead of hardcoded slate colors.
 - **Authentication and sign-in UX:** sign-in with email or username (`identifier`), improved credential validation and messages (EN/ES), and session/navbar flow fixes (state refresh, sign-out, and stable behavior without console/hydration errors).
 - **Device-level theme and language:** appearance and language preferences are stored globally in the browser (cookies + `localStorage`: `wolfmain-theme`, `wolfmain-lang`), applied early to avoid flashes, and preserved after sign-out or when signing in with another account on the same device.
 - **Cookie consent (first visit):** preference banner to accept/reject and formalize saving of theme and language, keeping a consistent experience across visits.

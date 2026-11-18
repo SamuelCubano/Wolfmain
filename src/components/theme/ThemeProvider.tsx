@@ -21,6 +21,7 @@ function applyTheme(resolved: "light" | "dark") {
   const root = document.documentElement;
   root.classList.toggle("dark", resolved === "dark");
   root.style.colorScheme = resolved;
+  root.setAttribute("data-theme", resolved);
 }
 
 function readCookie(name: string): string | null {

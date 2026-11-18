@@ -8,6 +8,7 @@ import { getServerLang, getServerT } from "@/lib/locale-server";
 import prisma from "@/prisma/client";
 
 export type AuthState = {
+  success?: boolean;
   message?: string;
   errors?: Record<string, string[]>;
 };
@@ -66,7 +67,7 @@ export async function registerAction(
 
     await setSessionCookie(user.id, user.email);
 
-    redirect("/dashboard");
+    return { success: true };
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) {
       throw error;
@@ -118,7 +119,7 @@ export async function loginAction(
 
     await setSessionCookie(user.id, user.email);
 
-    redirect("/dashboard");
+    return { success: true };
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) {
       throw error;
